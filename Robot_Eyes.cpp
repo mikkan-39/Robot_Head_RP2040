@@ -1,20 +1,10 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
-#include "hardware/spi.h"
 #include "hardware/i2c.h"
 #include "hardware/uart.h"
 
 #include "LCD_Driver.h"
 #include "GUI_Paint.h"
-
-// SPI Defines
-// We are going to use SPI 0, and allocate it to the following GPIO pins
-// Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
-#define SPI_PORT spi0
-#define PIN_MISO 16
-#define PIN_CS   17
-#define PIN_SCK  18
-#define PIN_MOSI 19
 
 // I2C defines
 // This example will use I2C0 on GPIO8 (SDA) and GPIO9 (SCL) running at 400KHz.
@@ -30,25 +20,28 @@
 
 // Use pins 4 and 5 for UART1
 // Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
-#define UART_TX_PIN 4
-#define UART_RX_PIN 5
+#define UART_TX_PIN 0
+#define UART_RX_PIN 1
 
 
+void SelectScreenR () {
+  gpio_put(DEV_CS_PIN, 1);
+  gpio_put(DEV_CS_PIN_2, 0);
+}
+
+void SelectScreenL () {
+  gpio_put(DEV_CS_PIN, 0);
+  gpio_put(DEV_CS_PIN_2, 1);
+}
+
+void SelectBothScreens () {
+  gpio_put(DEV_CS_PIN, 0);
+  gpio_put(DEV_CS_PIN_2, 0);
+}
 
 int main()
 {
     stdio_init_all();
-
-    // SPI initialisation. This example will use SPI at 1MHz.
-    spi_init(SPI_PORT, 1000*1000);
-    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
-    gpio_set_function(PIN_CS,   GPIO_FUNC_SIO);
-    gpio_set_function(PIN_SCK,  GPIO_FUNC_SPI);
-    gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
-    
-    // Chip select is active-low, so we'll initialise it to a driven-high state
-    gpio_set_dir(PIN_CS, GPIO_OUT);
-    gpio_put(PIN_CS, 1);
     // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
 
     // I2C Initialisation. Using it at 400Khz.
@@ -75,8 +68,59 @@ int main()
     
     // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
 
+    Config_Init();
+    LCD_Init();
+    SelectBothScreens();
+    Paint_NewImage(LCD_WIDTH, LCD_HEIGHT+1, 0, BLACK);
+    Paint_Clear(BLACK);
+
+    // SelectScreenL();
+    // Paint_DrawCircle(100, 150, 90, CYAN, DRAW_FILL_FULL);
+    // SelectScreenR();
+    // Paint_DrawCircle(140, 150, 90, CYAN, DRAW_FILL_FULL);
+
+    SelectBothScreens();
+    uint8_t x_start = 90;
+    uint8_t x_end = 180;
+    uint8_t radius_start = 30;
+    uint8_t radius_end = 50;
+    uint8_t side_step = 4;
+    uint8_t radius_step = 2;
+    uint8_t eye_offset = 50;
+
     while (true) {
-        printf("Hello, world!\n");
-        sleep_ms(1000);
+        // printf("Hello, world!\n");
+        // sleep_ms(1000);
+        // Paint_Clear(RED);
+        // Paint_Clear(BLUE);
+        for(uint8_t r = radius_start; r < radius_end; r+=radius_step){
+            SelectScreenR();
+            Paint_DrawCircle(x_start, 150, r, CYAN, DRAW_FILL_FULL);
+            SelectScreenL();
+            Paint_DrawCircle(x_start-eye_offset, 150, r, CYAN, DRAW_FILL_FULL);
+        }
+
+        for(uint8_t x = x_start; x < x_end; x+=side_step){
+            SelectScreenR();
+            Paint_DrawCircle(x, 150, radius_end, CYAN, DRAW_FILL_FULL);
+            SelectScreenL();
+            Paint_DrawCircle(x-eye_offset, 150, radius_end, CYAN, DRAW_FILL_FULL);
+        }
+
+        for(uint8_t r = radius_end; r > radius_start; r-=radius_step){
+            SelectScreenR();
+            Paint_DrawCircle(x_end, 150, r, CYAN, DRAW_FILL_FULL);
+            SelectScreenL();
+            Paint_DrawCircle(x_end-eye_offset, 150, r, CYAN, DRAW_FILL_FULL);
+        }
+
+        for(uint8_t x = x_end; x > x_start; x-=side_step){
+            SelectScreenR();
+            Paint_DrawCircle(x, 150, radius_start, CYAN, DRAW_FILL_FULL);
+            SelectScreenL();
+            Paint_DrawCircle(x-eye_offset, 150, radius_start, CYAN, DRAW_FILL_FULL);
+        }
+        // Paint_DrawRectangle(0, 0, 220, 220, RED, DRAW_FILL_FULL);
+        // Paint_DrawRectangle(0, 0, 220, 220, BLUE, DRAW_FILL_FULL);
     }
 }

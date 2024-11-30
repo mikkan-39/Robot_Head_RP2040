@@ -39,7 +39,10 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Robot_Eyes Robot_Eyes.cpp )
+add_executable(Robot_Eyes Robot_Eyes.cpp DEV_Config.cpp GUI_Paint.cpp LCD_Driver.cpp)
+# add_library(DEV_Config DEV_Config.cpp )
+# add_library(GUI_Paint GUI_Paint.cpp )
+# add_library(LCD_Driver LCD_Driver.cpp )
 
 pico_set_program_name(Robot_Eyes "Robot_Eyes")
 pico_set_program_version(Robot_Eyes "0.1")

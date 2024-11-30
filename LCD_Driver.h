@@ -15,7 +15,6 @@ void LCD_SetCursor(UWORD x1, UWORD y1, UWORD x2,UWORD y2);
 void LCD_SetUWORD(UWORD x, UWORD y, UWORD Color);
 
 void LCD_Init(void);
-void LCD_SetBacklight(UWORD Value);
 void LCD_Clear(UWORD Color);
 void LCD_ClearWindow(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD UWORD);
 

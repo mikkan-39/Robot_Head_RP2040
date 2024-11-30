@@ -1,6 +1,15 @@
 #include "DEV_Config.h"
 #include "pico/stdlib.h"
-#include "pico/"
+#include "hardware/spi.h"
+
+// SPI Defines
+// We are going to use SPI 0, and allocate it to the following GPIO pins
+// Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
+#define SPI_PORT spi0
+#define PIN_MISO 4
+#define PIN_CS   5
+#define PIN_SCK  2
+#define PIN_MOSI 3
 
 void GPIO_Init()
 {
@@ -21,10 +30,11 @@ void GPIO_Init()
   GPIO_Init();
 
   //spi
-  SPI.setDataMode(SPI_MODE3);
-  SPI.setBitOrder(MSBFIRST);
-  // SPI.setClockDivider(SPI_CLOCK_DIV2);
-  SPI.begin();
-  spi_init(spi0)
+    spi_init(SPI_PORT, 1000*1000*62.5);
+    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
+    gpio_set_function(PIN_CS,   GPIO_FUNC_SIO);
+    gpio_set_function(PIN_SCK,  GPIO_FUNC_SPI);
+    gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
+    gpio_set_dir(PIN_CS, GPIO_OUT);
   }
 

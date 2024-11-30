@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h> //memset()
 #include <math.h>
+#include "pico/stdlib.h"
+#include "hardware/spi.h"
 
 volatile PAINT Paint;
 
@@ -137,9 +139,27 @@ void Paint_SetPixel(UWORD Xpoint, UWORD Ypoint, UWORD Color)
   parameter:
     Color   :   Painted colors
 ******************************************************************************/
+void printBits(uint16_t num)
+{
+   for(int bit=0;bit<16; bit++)
+   {
+      printf("%i ", num & 0x01);
+      num = num >> 1;
+   }
+   printf("\n");
+}
+
+
 void Paint_Clear(UWORD Color)
 {
+  // printBits(Color);
   LCD_SetCursor(0, 0, Paint.WidthByte , Paint.HeightByte);
+  DEV_Digital_Write(DEV_DC_PIN, 1);
+  // uint16_t swapped = ((Color & 0xFF00) >> 8) | ((Color & 0x00FF) << 8);
+  // uint16_t buf[Paint.WidthByte*Paint.HeightByte] = {swapped};
+  // spi_set_format(spi0, 16, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
+  // spi_write16_blocking(spi0, buf, Paint.WidthByte*Paint.HeightByte);
+  // spi_set_format(spi0, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
   for (UWORD Y = 0; Y < Paint.HeightByte; Y++) {
     for (UWORD X = 0; X < Paint.WidthByte; X++ ) {//8 pixel =  1 byte
       LCD_WriteData_Word(Color);
@@ -292,24 +312,54 @@ void Paint_DrawCircle(  UWORD X_Center, UWORD Y_Center, UWORD Radius,
 
     int xoffset;
     int yoffset;
+    int offs;
 
-    for(int y=max(Y_Center-Radius-1, 0); y<=Y_Center+Radius+1 && y<=Paint.Height; y++){
-      for(int x=max(X_Center-Radius-1, 0); x<=X_Center+Radius+1 && x<=Paint.Width; x++){
-        xoffset = X_Center-x;
-        yoffset = Y_Center-y;
-        if(Draw_Fill == DRAW_FILL_FULL){
-          // LCD_SetCursor(X_Center-Radius, Y_Center-Radius, X_Center+Radius, Y_Center+Radius);
+    int x_boundary_l = std::max(X_Center-Radius-5, 0);
+    int y_boundary_l = std::max(Y_Center-Radius-5, 0);
+    int x_boundary_h = std::min(X_Center+Radius+5, (int)Paint.Width);
+    int y_boundary_h = std::min(Y_Center+Radius+5, (int)Paint.Height);
+
+    printf("x_boundary_l ");
+    printf("%d", x_boundary_l);
+    printf("\n");
+
+    printf("y_boundary_l ");
+    printf("%d", y_boundary_l);
+    printf("\n");
+
+    printf("x_boundary_h ");
+    printf("%d", x_boundary_h);
+    printf("\n");
+
+    printf("y_boundary_h ");
+    printf("%d", y_boundary_h);
+    printf("\n");
+
+    LCD_SetCursor(x_boundary_l, y_boundary_l, x_boundary_h, y_boundary_h);
+
+    if(Draw_Fill == DRAW_FILL_FULL){
+      for(int y=y_boundary_l; y<=y_boundary_h; y++){
+        for(int x=x_boundary_l; x<=x_boundary_h; x++){
+          xoffset = X_Center-x;
+          yoffset = Y_Center-y;
           if(xoffset*xoffset+yoffset*yoffset <= Radius*Radius){
-            Paint_DrawPoint(x, y, Color);
-            // LCD_WriteData_Byte(Color);
-          } 
-          // else {
-          //   LCD_WriteData_Byte(BLACK);
-          // }
-        } else {
-          int offs = xoffset*xoffset + yoffset*yoffset - Radius*Radius;
+            LCD_WriteData_Word(Color);
+          } else {
+            LCD_WriteData_Word(BLACK);
+          }
+          
+        }
+      } 
+    } else {
+      for(int y=y_boundary_l; y<=Y_Center-Radius+5 && y<=Paint.Height; y++){
+        for(int x=x_boundary_l; x<=x_boundary_h && x<=Paint.Width; x++){
+          xoffset = X_Center-x;
+          yoffset = Y_Center-y;
+          offs = xoffset*xoffset + yoffset*yoffset - Radius*Radius;
           if(offs >= 0 && offs <= 125){
-            Paint_DrawPoint(x, y, Color);
+            LCD_WriteData_Word(Color);
+          } else {
+            LCD_WriteData_Word(BLACK);
           }
         }
       }
@@ -355,30 +405,5 @@ void Paint_DrawCircle(  UWORD X_Center, UWORD Y_Center, UWORD Radius,
     //         XCurrent ++;
     //     }
     // }
-}
-
-/******************************************************************************
-  function: Display image
-  parameter:
-    image            锛欼mage start address
-    xStart           : X starting coordinates
-    yStart           : Y starting coordinates
-    xEnd             锛欼mage width
-    yEnd             : Image height
-******************************************************************************/
-void Paint_DrawImage(const unsigned char *image, UWORD xStart, UWORD yStart, UWORD W_Image, UWORD H_Image)
-{
-  int i, j;
-  for (j = 0; j < H_Image; j++) {
-    for (i = 0; i < W_Image; i++) {
-      if (xStart + i < LCD_WIDTH  &&  yStart + j < LCD_HEIGHT) //Exceeded part does not display
-        Paint_SetPixel(xStart + i, yStart + j, (pgm_read_byte(image + j * W_Image * 2 + i * 2 + 1)) << 8 | (pgm_read_byte(image + j * W_Image * 2 + i * 2)));
-      //Using arrays is a property of sequential storage, accessing the original array by algorithm
-      //j*W_Image*2          Y offset
-      //i*2                  X offset
-      //pgm_read_byte()
-    }
-  }
-
 }
 
