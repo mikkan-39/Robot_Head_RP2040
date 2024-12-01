@@ -1,67 +1,89 @@
 #include "LCD_Driver.h"
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
-
+#include "hardware/pio.h"
+#include "hardware/gpio.h"
+#include "lcd.pio.h"
 
 void SelectScreenR () {
-  gpio_put(DEV_CS_PIN, 1);
-  gpio_put(DEV_CS_PIN_2, 0);
+  sleep_us(1);
+	gpio_put_masked((1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!1 << DEV_CS_PIN | !!0 << DEV_CS_PIN_2);
+	sleep_us(1);
 }
 
 void SelectScreenL () {
-  gpio_put(DEV_CS_PIN, 0);
-  gpio_put(DEV_CS_PIN_2, 1);
+  sleep_us(1);
+	gpio_put_masked((1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!0 << DEV_CS_PIN | !!1 << DEV_CS_PIN_2);
+	sleep_us(1);
 }
 
 void SelectBothScreens () {
-  gpio_put(DEV_CS_PIN, 0);
-  gpio_put(DEV_CS_PIN_2, 0);
+  sleep_us(1);
+  gpio_put_masked((1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!0 << DEV_CS_PIN | !!0 << DEV_CS_PIN_2);
+  sleep_us(1);
 }
 
-/*******************************************************************************
-function:
-  Hardware reset
-*******************************************************************************/
-static void LCD_Reset(void)
+void lcd_set_dc_cs(bool dc, bool cs) {
+  sleep_us(1);
+  gpio_put_masked((1u << DEV_DC_PIN) | (1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!dc << DEV_DC_PIN | !!cs << DEV_CS_PIN | !!cs << DEV_CS_PIN_2);
+  sleep_us(1);
+}
+
+void LCD_Reset(void)
 {
-  DEV_Delay_ms(100);
-  DEV_Digital_Write(DEV_RST_PIN,0);
-  DEV_Delay_ms(100);
-  DEV_Digital_Write(DEV_RST_PIN,1);
-  DEV_Delay_ms(100);
+  sleep_ms(100);
+  gpio_put(DEV_RST_PIN, 0);
+  sleep_ms(100);
+  gpio_put(DEV_RST_PIN, 1);
+  sleep_ms(100);
 }
-
-/*******************************************************************************
-function:
-    Write register address and data
-*******************************************************************************/
-
 
 void LCD_WriteData_Byte(UBYTE da) 
 { 
-  DEV_Digital_Write(DEV_DC_PIN, 1);
-  DEV_SPI_WRITE(&da);
+  lcd_put(pio0, pio_state_machine, da);
+  lcd_wait_idle(pio0, pio_state_machine);
 }  
 
 void LCD_WriteData_Word(UWORD da)
 {
-  DEV_Digital_Write(DEV_DC_PIN, 1);
-//   DEV_SPI_WRITE_WORD(&da);
-  uint8_t d1 = da>>8;
-  uint8_t d2 = (uint8_t)da;
-//   printBits(d1);
-//   printf("\n");
-//   printBits(d2);
-//   printf("\n");
-  DEV_SPI_WRITE(&d1);
-  DEV_SPI_WRITE(&d2);
+  lcd_put(pio0, pio_state_machine, da >> 8);
+  lcd_put(pio0, pio_state_machine, da & 0xff);
 }   
 
 void LCD_WriteReg(UBYTE da)  
 { 
-  
-  DEV_Digital_Write(DEV_DC_PIN, 0);
-  DEV_SPI_WRITE(&da);
+  lcd_wait_idle(pio0, pio_state_machine);
+  sleep_us(1);
+  gpio_put(DEV_DC_PIN, 0);
+  sleep_us(1);
+  lcd_put(pio0, pio_state_machine, da);
+  lcd_wait_idle(pio0, pio_state_machine);
+  sleep_us(1);
+  gpio_put(DEV_DC_PIN, 1);
+  sleep_us(1);
+}
+
+void lcd_write_cmd(const uint8_t *cmd, size_t count) {
+  lcd_wait_idle(pio0, pio_state_machine);
+  lcd_set_dc_cs(0, 0);
+  lcd_put(pio0, pio_state_machine, *cmd++);
+  if (count >= 2) {
+      lcd_wait_idle(pio0, pio_state_machine);
+      lcd_set_dc_cs(1, 0);
+      for (size_t i = 0; i < count - 1; ++i)
+          lcd_put(pio0, pio_state_machine, *cmd++);
+  }
+  lcd_wait_idle(pio0, pio_state_machine);
+  lcd_set_dc_cs(1, 1);
+}
+
+void lcd_pipe_commands(const uint8_t *init_seq) {
+  const uint8_t *cmd = init_seq;
+  while (*cmd) {
+      lcd_write_cmd(cmd + 2, *cmd);
+      sleep_ms(*(cmd + 1) * 5);
+      cmd += *cmd + 2;
+  }
 }
 
 /******************************************************************************
@@ -72,242 +94,61 @@ void LCD_Init(void)
 {
   LCD_Reset();
 
-  //************* Start Initial Sequence **********// 
- 	LCD_WriteReg(0xEF);
-	LCD_WriteReg(0xEB);
-	LCD_WriteData_Byte(0x14); 
-	
-  	LCD_WriteReg(0xFE);			 
-	LCD_WriteReg(0xEF); 
+  const uint8_t init_seq[] = {
+    1, 1, 0xEF,                       
+    2, 1, 0xEB, 0x14,                  
+    1, 1, 0xFE, 
+    1, 1, 0xEF,
+    2, 1, 0xEB, 0x14,
+    2, 1, 0x84, 0x40,
+    2, 1, 0x85, 0xFF,
+    2, 1, 0x86, 0xFF,
+    2, 1, 0x87, 0xFF,
+    2, 1, 0x88, 0x0A,
+    2, 1, 0x89, 0x21,
+    2, 1, 0x8A, 0x00,
+    2, 1, 0x8B, 0x80,
+    2, 1, 0x8C, 0x01,
+    2, 1, 0x8D, 0x01,
+    2, 1, 0x8E, 0xFF,
+    2, 1, 0x8F, 0xFF,
+    3, 1, 0xB6, 0x00, 0x20,
+    2, 1, 0x36, 0x08,
+    2, 1, 0x3A, 0x05,
+    6, 1, 0x90, 0x08, 0x08, 0x08, 0x08,
+    2, 1, 0xBD, 0x06,
+    2, 1, 0xBC, 0x00,
+    4, 1, 0xFF, 0x60, 0x01, 0x04,
+    2, 1, 0xC3, 0x13,
+    2, 1, 0xC4, 0x13,
+    2, 1, 0xC9, 0x22,
+    2, 1, 0xBE, 0x11,
+    3, 1, 0xE1, 0x10, 0x0E,
+    4, 1, 0xDF, 0x21, 0x0C, 0x02,
+    7, 1, 0xF0, 0x45, 0x09, 0x08, 0x08, 0x26, 0x2A,
+    7, 1, 0xF1, 0x43, 0x70, 0x72, 0x36, 0x37, 0x6F,
+    7, 1, 0xF2, 0x45, 0x09, 0x08, 0x08, 0x26, 0x2A,
+    7, 1, 0xF3, 0x43, 0x70, 0x72, 0x36, 0x37, 0x6F,
+    3, 1, 0xED, 0x1B, 0x0B,
+    2, 1, 0xAE, 0x77,
+    2, 1, 0xCD, 0x63,
+    10, 1, 0x70, 0x07, 0x07, 0x04, 0x0E, 0x0F, 0x09, 0x07, 0x08, 0x03,
+    2, 1, 0xE8, 0x34,
+    13, 1, 0x62, 0x18, 0x0D, 0x71, 0xED, 0x70, 0x70, 0x18, 0x0F, 0x71, 0xEF, 0x70, 0x70,
+    13, 1, 0x63, 0x18, 0x11, 0x71, 0xF1, 0x70, 0x70, 0x18, 0x13, 0x71, 0xF3, 0x70, 0x70,
+    8, 1, 0x64, 0x28, 0x29, 0xF1, 0x01, 0xF1, 0x00, 0x07,
+    11, 1, 0x66, 0x3C, 0x00, 0xCD, 0x67, 0x45, 0x45, 0x10, 0x00, 0x00, 0x00,
+    11, 1, 0x67, 0x00, 0x3C, 0x00, 0x00, 0x00, 0x01, 0x54, 0x10, 0x32, 0x98,
+    8, 1, 0x74, 0x10, 0x85, 0x80, 0x00, 0x00, 0x4E, 0x00,
+    3, 1, 0x98, 0x3E, 0x07,
+    1, 1, 0x35,
+    1, 1, 0x21,
+    1, 50, 0x11,
+    1, 5, 0x29,          
+    0                                   
+  };
 
-	LCD_WriteReg(0xEB);	
-	LCD_WriteData_Byte(0x14); 
-
-	LCD_WriteReg(0x84);			
-	LCD_WriteData_Byte(0x40); 
-
-	LCD_WriteReg(0x85);			
-	LCD_WriteData_Byte(0xFF); 
-
-	LCD_WriteReg(0x86);			
-	LCD_WriteData_Byte(0xFF); 
-
-	LCD_WriteReg(0x87);			
-	LCD_WriteData_Byte(0xFF);
-
-	LCD_WriteReg(0x88);			
-	LCD_WriteData_Byte(0x0A);
-
-	LCD_WriteReg(0x89);			
-	LCD_WriteData_Byte(0x21); 
-
-	LCD_WriteReg(0x8A);			
-	LCD_WriteData_Byte(0x00); 
-
-	LCD_WriteReg(0x8B);			
-	LCD_WriteData_Byte(0x80); 
-
-	LCD_WriteReg(0x8C);			
-	LCD_WriteData_Byte(0x01); 
-
-	LCD_WriteReg(0x8D);			
-	LCD_WriteData_Byte(0x01); 
-
-	LCD_WriteReg(0x8E);			
-	LCD_WriteData_Byte(0xFF); 
-
-	LCD_WriteReg(0x8F);			
-	LCD_WriteData_Byte(0xFF); 
-
-
-	LCD_WriteReg(0xB6);
-	LCD_WriteData_Byte(0x00);
-	LCD_WriteData_Byte(0x20);
-
-	LCD_WriteReg(0x36);
-	LCD_WriteData_Byte(0x08);//璁剧疆涓虹珫灞�
-
-	LCD_WriteReg(0x3A);			
-	LCD_WriteData_Byte(0x05); 
-
-
-	LCD_WriteReg(0x90);			
-	LCD_WriteData_Byte(0x08);
-	LCD_WriteData_Byte(0x08);
-	LCD_WriteData_Byte(0x08);
-	LCD_WriteData_Byte(0x08); 
-
-	LCD_WriteReg(0xBD);			
-	LCD_WriteData_Byte(0x06);
-	
-	LCD_WriteReg(0xBC);			
-	LCD_WriteData_Byte(0x00);	
-
-	LCD_WriteReg(0xFF);			
-	LCD_WriteData_Byte(0x60);
-	LCD_WriteData_Byte(0x01);
-	LCD_WriteData_Byte(0x04);
-
-	LCD_WriteReg(0xC3);			
-	LCD_WriteData_Byte(0x13);
-	LCD_WriteReg(0xC4);			
-	LCD_WriteData_Byte(0x13);
-
-	LCD_WriteReg(0xC9);			
-	LCD_WriteData_Byte(0x22);
-
-	LCD_WriteReg(0xBE);			
-	LCD_WriteData_Byte(0x11); 
-
-	LCD_WriteReg(0xE1);			
-	LCD_WriteData_Byte(0x10);
-	LCD_WriteData_Byte(0x0E);
-
-	LCD_WriteReg(0xDF);			
-	LCD_WriteData_Byte(0x21);
-	LCD_WriteData_Byte(0x0c);
-	LCD_WriteData_Byte(0x02);
-
-	LCD_WriteReg(0xF0);   
-	LCD_WriteData_Byte(0x45);
-	LCD_WriteData_Byte(0x09);
-	LCD_WriteData_Byte(0x08);
-	LCD_WriteData_Byte(0x08);
-	LCD_WriteData_Byte(0x26);
- 	LCD_WriteData_Byte(0x2A);
-
- 	LCD_WriteReg(0xF1);    
- 	LCD_WriteData_Byte(0x43);
- 	LCD_WriteData_Byte(0x70);
- 	LCD_WriteData_Byte(0x72);
- 	LCD_WriteData_Byte(0x36);
- 	LCD_WriteData_Byte(0x37);  
- 	LCD_WriteData_Byte(0x6F);
-
-
- 	LCD_WriteReg(0xF2);   
- 	LCD_WriteData_Byte(0x45);
- 	LCD_WriteData_Byte(0x09);
- 	LCD_WriteData_Byte(0x08);
- 	LCD_WriteData_Byte(0x08);
- 	LCD_WriteData_Byte(0x26);
- 	LCD_WriteData_Byte(0x2A);
-
- 	LCD_WriteReg(0xF3);   
- 	LCD_WriteData_Byte(0x43);
- 	LCD_WriteData_Byte(0x70);
- 	LCD_WriteData_Byte(0x72);
- 	LCD_WriteData_Byte(0x36);
- 	LCD_WriteData_Byte(0x37); 
- 	LCD_WriteData_Byte(0x6F);
-
-	LCD_WriteReg(0xED);	
-	LCD_WriteData_Byte(0x1B); 
-	LCD_WriteData_Byte(0x0B); 
-
-	LCD_WriteReg(0xAE);			
-	LCD_WriteData_Byte(0x77);
-	
-	LCD_WriteReg(0xCD);			
-	LCD_WriteData_Byte(0x63);		
-
-
-	LCD_WriteReg(0x70);			
-	LCD_WriteData_Byte(0x07);
-	LCD_WriteData_Byte(0x07);
-	LCD_WriteData_Byte(0x04);
-	LCD_WriteData_Byte(0x0E); 
-	LCD_WriteData_Byte(0x0F); 
-	LCD_WriteData_Byte(0x09);
-	LCD_WriteData_Byte(0x07);
-	LCD_WriteData_Byte(0x08);
-	LCD_WriteData_Byte(0x03);
-
-	LCD_WriteReg(0xE8);			
-	LCD_WriteData_Byte(0x34);
-
-	LCD_WriteReg(0x62);			
-	LCD_WriteData_Byte(0x18);
-	LCD_WriteData_Byte(0x0D);
-	LCD_WriteData_Byte(0x71);
-	LCD_WriteData_Byte(0xED);
-	LCD_WriteData_Byte(0x70); 
-	LCD_WriteData_Byte(0x70);
-	LCD_WriteData_Byte(0x18);
-	LCD_WriteData_Byte(0x0F);
-	LCD_WriteData_Byte(0x71);
-	LCD_WriteData_Byte(0xEF);
-	LCD_WriteData_Byte(0x70); 
-	LCD_WriteData_Byte(0x70);
-
-	LCD_WriteReg(0x63);			
-	LCD_WriteData_Byte(0x18);
-	LCD_WriteData_Byte(0x11);
-	LCD_WriteData_Byte(0x71);
-	LCD_WriteData_Byte(0xF1);
-	LCD_WriteData_Byte(0x70); 
-	LCD_WriteData_Byte(0x70);
-	LCD_WriteData_Byte(0x18);
-	LCD_WriteData_Byte(0x13);
-	LCD_WriteData_Byte(0x71);
-	LCD_WriteData_Byte(0xF3);
-	LCD_WriteData_Byte(0x70); 
-	LCD_WriteData_Byte(0x70);
-
-	LCD_WriteReg(0x64);			
-	LCD_WriteData_Byte(0x28);
-	LCD_WriteData_Byte(0x29);
-	LCD_WriteData_Byte(0xF1);
-	LCD_WriteData_Byte(0x01);
-	LCD_WriteData_Byte(0xF1);
-	LCD_WriteData_Byte(0x00);
-	LCD_WriteData_Byte(0x07);
-
-	LCD_WriteReg(0x66);			
-	LCD_WriteData_Byte(0x3C);
-	LCD_WriteData_Byte(0x00);
-	LCD_WriteData_Byte(0xCD);
-	LCD_WriteData_Byte(0x67);
-	LCD_WriteData_Byte(0x45);
-	LCD_WriteData_Byte(0x45);
-	LCD_WriteData_Byte(0x10);
-	LCD_WriteData_Byte(0x00);
-	LCD_WriteData_Byte(0x00);
-	LCD_WriteData_Byte(0x00);
-
-	LCD_WriteReg(0x67);			
-	LCD_WriteData_Byte(0x00);
-	LCD_WriteData_Byte(0x3C);
-	LCD_WriteData_Byte(0x00);
-	LCD_WriteData_Byte(0x00);
-	LCD_WriteData_Byte(0x00);
-	LCD_WriteData_Byte(0x01);
-	LCD_WriteData_Byte(0x54);
-	LCD_WriteData_Byte(0x10);
-	LCD_WriteData_Byte(0x32);
-	LCD_WriteData_Byte(0x98);
-
-	LCD_WriteReg(0x74);			
-	LCD_WriteData_Byte(0x10);	
-	LCD_WriteData_Byte(0x85);	
-	LCD_WriteData_Byte(0x80);
-	LCD_WriteData_Byte(0x00); 
-	LCD_WriteData_Byte(0x00); 
-	LCD_WriteData_Byte(0x4E);
-	LCD_WriteData_Byte(0x00);					
-	
-    LCD_WriteReg(0x98);			
-	LCD_WriteData_Byte(0x3e);
-	LCD_WriteData_Byte(0x07);
-
-	LCD_WriteReg(0x35);	
-	LCD_WriteReg(0x21);
-
-	LCD_WriteReg(0x11);
-	DEV_Delay_ms(120);
-	LCD_WriteReg(0x29);
-	DEV_Delay_ms(20);
-  /*************************/
+  lcd_pipe_commands(init_seq);
 } 
 
 /******************************************************************************
@@ -360,7 +201,7 @@ parameter :
     Yend  :   End UWORD coordinates
     color :   Set the color
 ******************************************************************************/
-void LCD_ClearWindow(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend,UWORD color)
+void LCD_ClearWindow(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD color)
 {          
   UWORD i,j; 
   LCD_SetCursor(Xstart, Ystart, Xend-1,Yend-1);
@@ -382,7 +223,7 @@ parameter :
 ******************************************************************************/
 void LCD_SetWindowColor(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend,UWORD  Color)
 {
-  LCD_SetCursor( Xstart,Ystart,Xend,Yend);
+  LCD_SetCursor(Xstart,Ystart,Xend,Yend);
   LCD_WriteData_Word(Color);      
 }
 
@@ -393,7 +234,7 @@ parameter :
     Y     :   Set the Y coordinate
     Color :   Set the color
 ******************************************************************************/
-void LCD_SetUWORD(UWORD x, UWORD y, UWORD Color)
+void LCD_DrawPixel(UWORD x, UWORD y, UWORD Color)
 {
   LCD_SetCursor(x,y,x,y);
   LCD_WriteData_Word(Color);      

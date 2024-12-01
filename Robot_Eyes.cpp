@@ -6,6 +6,8 @@
 #include "LCD_Driver.h"
 #include "GUI_Paint.h"
 
+#include "lcd.pio.h"
+
 // I2C defines
 // This example will use I2C0 on GPIO8 (SDA) and GPIO9 (SCL) running at 400KHz.
 // Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
@@ -24,11 +26,20 @@
 #define UART_RX_PIN 1
 
 
+#define SERIAL_CLK_DIV 1.f
+
+void DrawEye(UBYTE X, UBYTE Y, UBYTE Radius, UBYTE SideStep){
+    uint8_t eye_offset = 50;
+    SelectScreenR();
+    Paint_DrawCircle(X, Y, Radius, CYAN, DRAW_FILL_FULL, SideStep);
+    SelectScreenL();
+    Paint_DrawCircle(X-eye_offset, Y, Radius, CYAN, DRAW_FILL_FULL, SideStep);
+    SelectBothScreens();
+}
 
 int main()
 {
     stdio_init_all();
-    // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
 
     // I2C Initialisation. Using it at 400Khz.
     i2c_init(I2C_PORT, 400*1000);
@@ -41,76 +52,61 @@ int main()
 
     // Set up our UART
     uart_init(UART_ID, BAUD_RATE);
-    // Set the TX and RX pins by using the function select on the GPIO
-    // Set datasheet for more information on function select
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-    
-    // Use some the various UART functions to send out data
-    // In a default system, printf will also output via the default UART
-    
-    // Send out a string, with CR/LF conversions
     uart_puts(UART_ID, " Hello, UART!\n");
-    
     // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
 
-    Config_Init();
+    
+    gpio_init(DEV_CS_PIN);
+    gpio_init(DEV_CS_PIN_2);
+    gpio_init(DEV_DC_PIN);
+    gpio_init(DEV_RST_PIN);
+    gpio_set_dir(DEV_CS_PIN, GPIO_OUT);
+    gpio_set_dir(DEV_CS_PIN_2, GPIO_OUT);
+    gpio_set_dir(DEV_DC_PIN, GPIO_OUT);
+    gpio_set_dir(DEV_RST_PIN, GPIO_OUT);
+
+    gpio_put(DEV_CS_PIN, 1);
+    gpio_put(DEV_CS_PIN_2, 1);
+    gpio_put(DEV_RST_PIN, 1);
+
+    uint offset = pio_add_program(pio0, &lcd_program);
+    lcd_program_init(pio0, pio_state_machine, offset, DEV_MOSI_PIN, DEV_SCK_PIN, SERIAL_CLK_DIV);
+
+    SelectBothScreens();
     LCD_Init();
+    Paint_NewImage(LCD_WIDTH, LCD_HEIGHT, BLACK);
+    
     SelectBothScreens();
-    Paint_NewImage(LCD_WIDTH, LCD_HEIGHT+1, 0, BLACK);
-    Paint_Clear(0x5555);
+    LCD_Clear(BLACK);
 
-    // SelectScreenL();
-    // Paint_DrawCircle(100, 150, 90, CYAN, DRAW_FILL_FULL);
-    // SelectScreenR();
-    // Paint_DrawCircle(140, 150, 90, CYAN, DRAW_FILL_FULL);
-
-    SelectBothScreens();
     uint8_t x_start = 90;
     uint8_t x_end = 180;
     uint8_t radius_start = 30;
-    uint8_t radius_end = 50;
+    uint8_t radius_end = 120;
     uint8_t side_step = 4;
     uint8_t radius_step = 2;
-    uint8_t eye_offset = 50;
+    
     DRAW_FILL fill = DRAW_FILL_FULL;
-    while(true){
-        Paint_Clear(0x5555);
-        Paint_Clear(0x5555);
-    }
+
     while (true) {
         // printf("Hello, world!\n");
         // sleep_ms(1000);
-        // Paint_Clear(RED);
-        // Paint_Clear(BLUE);
         for(uint8_t r = radius_start; r < radius_end; r+=radius_step){
-            SelectScreenR();
-            Paint_DrawCircle(x_start, 150, r, CYAN, fill);
-            SelectScreenL();
-            Paint_DrawCircle(x_start-eye_offset, 150, r, CYAN, fill);
+            DrawEye(x_start, 150, r, side_step);
         }
 
         for(uint8_t x = x_start; x < x_end; x+=side_step){
-            SelectScreenR();
-            Paint_DrawCircle(x, 150, radius_end, CYAN, fill);
-            SelectScreenL();
-            Paint_DrawCircle(x-eye_offset, 150, radius_end, CYAN, fill);
+            DrawEye(x, 150, radius_end, side_step);
         }
 
         for(uint8_t r = radius_end; r > radius_start; r-=radius_step){
-            SelectScreenR();
-            Paint_DrawCircle(x_end, 150, r, CYAN, fill);
-            SelectScreenL();
-            Paint_DrawCircle(x_end-eye_offset, 150, r, CYAN, fill);
+            DrawEye(x_end, 150, r, side_step);
         }
 
         for(uint8_t x = x_end; x > x_start; x-=side_step){
-            SelectScreenR();
-            Paint_DrawCircle(x, 150, radius_start, CYAN, fill);
-            SelectScreenL();
-            Paint_DrawCircle(x-eye_offset, 150, radius_start, CYAN, fill);
+            DrawEye(x, 150, radius_start, side_step);
         }
-        // Paint_DrawRectangle(0, 0, 220, 220, RED, DRAW_FILL_FULL);
-        // Paint_DrawRectangle(0, 0, 220, 220, BLUE, DRAW_FILL_FULL);
     }
 }

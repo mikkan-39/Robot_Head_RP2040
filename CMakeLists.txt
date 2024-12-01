@@ -30,19 +30,14 @@ include(pico_sdk_import.cmake)
 
 project(Robot_Eyes C CXX ASM)
 
-set(PICO_CXX_ENABLE_EXCEPTIONS 1)
-
-set(PICO_CXX_ENABLE_RTTI 1)
-
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Robot_Eyes Robot_Eyes.cpp DEV_Config.cpp GUI_Paint.cpp LCD_Driver.cpp)
-# add_library(DEV_Config DEV_Config.cpp )
-# add_library(GUI_Paint GUI_Paint.cpp )
-# add_library(LCD_Driver LCD_Driver.cpp )
+add_executable(Robot_Eyes Robot_Eyes.cpp GUI_Paint.cpp LCD_Driver.cpp)
+
+pico_generate_pio_header(Robot_Eyes ${CMAKE_CURRENT_LIST_DIR}/lcd.pio)
 
 pico_set_program_name(Robot_Eyes "Robot_Eyes")
 pico_set_program_version(Robot_Eyes "0.1")
@@ -64,6 +59,7 @@ target_include_directories(Robot_Eyes PRIVATE
 target_link_libraries(Robot_Eyes 
         hardware_spi
         hardware_i2c
+        hardware_pio
         )
 
 pico_add_extra_outputs(Robot_Eyes)
