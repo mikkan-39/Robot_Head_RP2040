@@ -213,22 +213,7 @@ void LCD_ClearWindow(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD c
 }
 
 /******************************************************************************
-function: Set the color of an area
-parameter :
-    Xstart:   Start UWORD x coordinate
-    Ystart:   Start UWORD y coordinate
-    Xend  :   End UWORD coordinates
-    Yend  :   End UWORD coordinates
-    Color :   Set the color
-******************************************************************************/
-void LCD_SetWindowColor(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend,UWORD  Color)
-{
-  LCD_SetCursor(Xstart,Ystart,Xend,Yend);
-  LCD_WriteData_Word(Color);      
-}
-
-/******************************************************************************
-function: Draw a UWORD
+function: Draw a Pixel
 parameter :
     X     :   Set the X coordinate
     Y     :   Set the Y coordinate

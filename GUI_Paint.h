@@ -64,10 +64,7 @@ void Paint_SelectImage(UBYTE *image);
 void Paint_DrawLine(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD Color);
 void Paint_DrawRectangle(UWORD X_Center, UWORD Y_Center, UWORD Radius, UWORD Color, DRAW_FILL Filled);
 void Paint_DrawCircle(UWORD X_Center, UWORD Y_Center, UWORD Radius, UWORD Color, DRAW_FILL Draw_Fill, UBYTE sideStep);
-
-//pic
-void Paint_DrawImage(const unsigned char *image,UWORD Startx, UWORD Starty,UWORD Endx, UWORD Endy); 
-
+void Paint_MoveEye(UWORD Xstart, UWORD Xend, UWORD Ystart, UWORD Yend, UWORD Rstart, UWORD Rend, UWORD SideStep);
 
 #endif
 

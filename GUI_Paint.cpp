@@ -31,11 +31,11 @@ void Paint_NewImage(UWORD Width, UWORD Height, UWORD Color)
 /******************************************************************************
 function:	Draw a line of arbitrary slope
 parameter:
-    Xstart 锛歋tarting Xpoint point coordinates
-    Ystart 锛歋tarting Xpoint point coordinates
-    Xend   锛欵nd point Xpoint coordinate
-    Yend   锛欵nd point Ypoint coordinate
-    Color  锛歍he color of the line segment
+    Xstart Starting Xpoint point coordinates
+    Ystart Starting Xpoint point coordinates
+    Xend   End point Xpoint coordinate
+    Yend   End point Ypoint coordinate
+    Color  The color of the line segment
 ******************************************************************************/
 void Paint_DrawLine(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD Color)
 {
@@ -72,12 +72,12 @@ void Paint_DrawLine(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD Co
 /******************************************************************************
 function:	Draw a rectangle
 parameter:
-    Xstart 锛歊ectangular  Starting Xpoint point coordinates
-    Ystart 锛歊ectangular  Starting Xpoint point coordinates
-    Xend   锛歊ectangular  End point Xpoint coordinate
-    Yend   锛歊ectangular  End point Ypoint coordinate
-    Color  锛歍he color of the Rectangular segment
-    Filled : Whether it is filled--- 1 solid 0锛歟mpty
+    Xstart Rectangular  Starting Xpoint point coordinates
+    Ystart Rectangular  Starting Xpoint point coordinates
+    Xend   Rectangular  End point Xpoint coordinate
+    Yend   Rectangular  End point Ypoint coordinate
+    Color  The color of the Rectangular segment
+    Filled : Whether it is filled--- 1 solid 0 empty
 ******************************************************************************/
 void Paint_DrawRectangle( UWORD X_Center, UWORD Y_Center, UWORD Radius, 
                           UWORD Color, DRAW_FILL Filled )
@@ -123,10 +123,10 @@ void Paint_DrawCircle(  UWORD X_Center, UWORD Y_Center, UWORD Radius,
   int yoffset;
   int offs;
 
-  int x_boundary_l = std::max(X_Center-Radius-sideStep, 0);
-  int y_boundary_l = std::max(Y_Center-Radius-sideStep, 0);
-  int x_boundary_h = std::min(X_Center+Radius+sideStep, (int)Paint.Width);
-  int y_boundary_h = std::min(Y_Center+Radius+sideStep, (int)Paint.Height);
+  int x_boundary_l = std::max((int)X_Center-(int)Radius-(int)sideStep, 0);
+  int y_boundary_l = std::max((int)Y_Center-(int)Radius-(int)sideStep, 0);
+  int x_boundary_h = std::min((int)X_Center+(int)Radius+(int)sideStep, (int)Paint.Width);
+  int y_boundary_h = std::min((int)Y_Center+(int)Radius+(int)sideStep, (int)Paint.Height);
 
   LCD_SetCursor(x_boundary_l, y_boundary_l, x_boundary_h, y_boundary_h);
 
@@ -163,3 +163,49 @@ void Paint_DrawCircle(  UWORD X_Center, UWORD Y_Center, UWORD Radius,
   }
 }
 
+
+static void DrawEye(UBYTE X, UBYTE Y, UBYTE Radius, UBYTE SideStep){
+    uint8_t r_eye_offset = 15;
+    uint8_t l_eye_offset = 15;
+    SelectScreenR();
+    Paint_DrawCircle(X+r_eye_offset, Y, Radius, CYAN, DRAW_FILL_FULL, SideStep);
+    SelectScreenL();
+    Paint_DrawCircle(X-l_eye_offset, Y, Radius, CYAN, DRAW_FILL_FULL, SideStep);
+    SelectBothScreens();
+}
+
+void Paint_MoveEye(UWORD Xstart, UWORD Xend, UWORD Ystart, UWORD Yend, UWORD Rstart, UWORD Rend, UWORD SideStep)
+{
+    UWORD Xpoint = Xstart;
+    UWORD Ypoint = Ystart;
+    UWORD Rpoint = Rstart;
+    
+    int dx = (int)Xend - (int)Xstart >= 0 ? Xend - Xstart : Xstart - Xend;
+    int dy = (int)Yend - (int)Ystart >= 0 ? Yend - Ystart : Ystart - Yend;
+    int dr = (int)Rend - (int)Rstart >= 0 ? Rend - Rstart : Rstart - Rend;
+    int dmax = std::max(std::max(dx, dy), dr);
+    int steps = dmax / SideStep;
+
+    
+    if(dmax == 0 || steps == 0){
+      LCD_Clear(BLACK);
+      DrawEye(Xpoint, Ypoint, Rpoint, 1);
+      return;
+    }
+    
+
+    for (int i = 0; i < steps; i++) {
+        DrawEye(Xpoint, Ypoint, Rpoint, i == 0 ? 120 : SideStep+1);
+        float progress = (float)i/(float)steps;
+        float Xprogress = (Xend - Xstart) * progress;
+        float Yprogress = (Yend - Ystart) * progress;
+        float Rprogress = (Rend - Rstart) * progress;
+
+        Xpoint = Xstart + (int)Xprogress;
+        Ypoint = Ystart + (int)Yprogress;
+        Rpoint = Rstart + (int)Rprogress;
+    }
+
+    if(Rpoint != Rend || Xpoint != Xend || Ypoint != Yend)
+      DrawEye(Xpoint, Ypoint, Rpoint, SideStep+1);
+}

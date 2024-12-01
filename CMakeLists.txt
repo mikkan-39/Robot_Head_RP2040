@@ -60,6 +60,7 @@ target_link_libraries(Robot_Eyes
         hardware_spi
         hardware_i2c
         hardware_pio
+        pico_rand
         )
 
 pico_add_extra_outputs(Robot_Eyes)

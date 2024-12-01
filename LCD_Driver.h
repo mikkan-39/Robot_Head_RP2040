@@ -40,4 +40,3 @@ void LCD_Clear(UWORD Color);
 void LCD_ClearWindow(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD UWORD);
 
 #endif
-
