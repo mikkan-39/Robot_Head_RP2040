@@ -2,6 +2,22 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 
+
+void SelectScreenR () {
+  gpio_put(DEV_CS_PIN, 1);
+  gpio_put(DEV_CS_PIN_2, 0);
+}
+
+void SelectScreenL () {
+  gpio_put(DEV_CS_PIN, 0);
+  gpio_put(DEV_CS_PIN_2, 1);
+}
+
+void SelectBothScreens () {
+  gpio_put(DEV_CS_PIN, 0);
+  gpio_put(DEV_CS_PIN_2, 0);
+}
+
 /*******************************************************************************
 function:
   Hardware reset

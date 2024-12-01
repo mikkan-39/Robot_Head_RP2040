@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include "Debug.h"
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 

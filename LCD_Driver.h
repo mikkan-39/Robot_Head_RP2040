@@ -6,6 +6,9 @@
 #define LCD_WIDTH   240 //LCD width
 #define LCD_HEIGHT  240 //LCD height
 
+void SelectScreenR();
+void SelectScreenL();
+void SelectBothScreens();
 
 void LCD_WriteData_Byte(UBYTE da); 
 void LCD_WriteData_Word(UWORD da);

@@ -193,13 +193,8 @@ parameter:
     Color		:   Set color
     Dot_Pixel	:	point size
 ******************************************************************************/
-void Paint_DrawPoint( UWORD Xpoint,       UWORD Ypoint, UWORD Color)
+void Paint_DrawPoint( UWORD Xpoint, UWORD Ypoint, UWORD Color)
 {
-    if (Xpoint > Paint.Width || Ypoint > Paint.Height) {
-        Debug("Paint_DrawPoint Input exceeds the normal display range\r\n");
-        return;
-    }
-
     Paint_SetPixel(Xpoint, Ypoint, Color);
 }
 
@@ -214,12 +209,6 @@ parameter:
 ******************************************************************************/
 void Paint_DrawLine(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD Color)
 {
-    if (Xstart > Paint.Width || Ystart > Paint.Height ||
-        Xend > Paint.Width || Yend > Paint.Height) {
-        Debug("Paint_DrawLine Input exceeds the normal display range\r\n");
-        return;
-    }
-
     UWORD Xpoint = Xstart;
     UWORD Ypoint = Ystart;
     
@@ -260,19 +249,24 @@ parameter:
     Color  锛歍he color of the Rectangular segment
     Filled : Whether it is filled--- 1 solid 0锛歟mpty
 ******************************************************************************/
-void Paint_DrawRectangle( UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, 
+void Paint_DrawRectangle( UWORD X_Center, UWORD Y_Center, UWORD Radius, 
                           UWORD Color, DRAW_FILL Filled )
 {
-    if (Xstart > Paint.Width || Ystart > Paint.Height ||
-        Xend > Paint.Width || Yend > Paint.Height) {
-        Debug("Input exceeds the normal display range\r\n");
-        return;
-    }
+    int Xstart = std::max(X_Center-Radius-5, 0);
+    int Ystart = std::max(Y_Center-Radius-5, 0);
+    int Xend = std::min(X_Center+Radius+5, (int)Paint.Width);
+    int Yend = std::min(Y_Center+Radius+5, (int)Paint.Height);
 
-    if (Filled ) {
-        UWORD Ypoint;
-        for(Ypoint = Ystart; Ypoint < Yend; Ypoint++) {
-            Paint_DrawLine(Xstart, Ypoint, Xend, Ypoint, Color);
+    if (Filled) {
+        LCD_SetCursor(Xstart, Ystart, Xend, Yend);
+        for(int y = Ystart; y<=Yend; y++) {
+            for(int x = Xstart; x<=Xend; x++){
+              if(x-Xstart>5 && y-Ystart>5 && Xend-x>5 && Yend-y>5){
+                LCD_WriteData_Word(Color);
+              }else{
+                LCD_WriteData_Word(BLACK);
+              }
+            }
         }
     } else {
         Paint_DrawLine(Xstart, Ystart, Xend, Ystart, Color);
@@ -295,11 +289,6 @@ parameter:
 void Paint_DrawCircle(  UWORD X_Center, UWORD Y_Center, UWORD Radius, 
                         UWORD Color, DRAW_FILL Draw_Fill )
 {
-    if (X_Center > Paint.Width || Y_Center >= Paint.Height) {
-        Debug("Paint_DrawCircle Input exceeds the normal display range\r\n");
-        return;
-    }
-
     //Draw a circle from(0, R) as a starting point
     int16_t XCurrent, YCurrent;
     XCurrent = 0;
@@ -319,21 +308,21 @@ void Paint_DrawCircle(  UWORD X_Center, UWORD Y_Center, UWORD Radius,
     int x_boundary_h = std::min(X_Center+Radius+5, (int)Paint.Width);
     int y_boundary_h = std::min(Y_Center+Radius+5, (int)Paint.Height);
 
-    printf("x_boundary_l ");
-    printf("%d", x_boundary_l);
-    printf("\n");
+    // printf("x_boundary_l ");
+    // printf("%d", x_boundary_l);
+    // printf("\n");
 
-    printf("y_boundary_l ");
-    printf("%d", y_boundary_l);
-    printf("\n");
+    // printf("y_boundary_l ");
+    // printf("%d", y_boundary_l);
+    // printf("\n");
 
-    printf("x_boundary_h ");
-    printf("%d", x_boundary_h);
-    printf("\n");
+    // printf("x_boundary_h ");
+    // printf("%d", x_boundary_h);
+    // printf("\n");
 
-    printf("y_boundary_h ");
-    printf("%d", y_boundary_h);
-    printf("\n");
+    // printf("y_boundary_h ");
+    // printf("%d", y_boundary_h);
+    // printf("\n");
 
     LCD_SetCursor(x_boundary_l, y_boundary_l, x_boundary_h, y_boundary_h);
 
@@ -347,18 +336,22 @@ void Paint_DrawCircle(  UWORD X_Center, UWORD Y_Center, UWORD Radius,
           } else {
             LCD_WriteData_Word(BLACK);
           }
-          
         }
       } 
     } else {
-      for(int y=y_boundary_l; y<=Y_Center-Radius+5 && y<=Paint.Height; y++){
-        for(int x=x_boundary_l; x<=x_boundary_h && x<=Paint.Width; x++){
+      for(int y=y_boundary_l; y<=y_boundary_h; y++){
+        for(int x=x_boundary_l; x<=x_boundary_h; x++){
           xoffset = X_Center-x;
           yoffset = Y_Center-y;
           offs = xoffset*xoffset + yoffset*yoffset - Radius*Radius;
-          if(offs >= 0 && offs <= 125){
-            LCD_WriteData_Word(Color);
-          } else {
+          if(offs <= 0){
+            if(offs > -Radius*10){
+              LCD_WriteData_Word(Color);
+            } else {
+              LCD_WriteData_Word(BLACK);
+            }
+          } 
+          else {
             LCD_WriteData_Word(BLACK);
           }
         }

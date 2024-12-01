@@ -3,7 +3,6 @@
 
 #include "DEV_Config.h"
 #include "LCD_Driver.h"
-#include "Debug.h"
 /**
  * Image attributes
 **/
@@ -137,7 +136,7 @@ void Paint_ClearWindows(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWOR
 //Drawing
 void Paint_DrawPoint(UWORD Xpoint, UWORD Ypoint, UWORD Color);
 void Paint_DrawLine(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD Color);
-void Paint_DrawRectangle(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD Color, DRAW_FILL Filled );
+void Paint_DrawRectangle(UWORD X_Center, UWORD Y_Center, UWORD Radius, UWORD Color, DRAW_FILL Filled);
 void Paint_DrawCircle(UWORD X_Center, UWORD Y_Center, UWORD Radius, UWORD Color, DRAW_FILL Draw_Fill );
 
 //pic

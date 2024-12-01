@@ -24,20 +24,6 @@
 #define UART_RX_PIN 1
 
 
-void SelectScreenR () {
-  gpio_put(DEV_CS_PIN, 1);
-  gpio_put(DEV_CS_PIN_2, 0);
-}
-
-void SelectScreenL () {
-  gpio_put(DEV_CS_PIN, 0);
-  gpio_put(DEV_CS_PIN_2, 1);
-}
-
-void SelectBothScreens () {
-  gpio_put(DEV_CS_PIN, 0);
-  gpio_put(DEV_CS_PIN_2, 0);
-}
 
 int main()
 {
@@ -72,7 +58,7 @@ int main()
     LCD_Init();
     SelectBothScreens();
     Paint_NewImage(LCD_WIDTH, LCD_HEIGHT+1, 0, BLACK);
-    Paint_Clear(BLACK);
+    Paint_Clear(0x5555);
 
     // SelectScreenL();
     // Paint_DrawCircle(100, 150, 90, CYAN, DRAW_FILL_FULL);
@@ -87,7 +73,11 @@ int main()
     uint8_t side_step = 4;
     uint8_t radius_step = 2;
     uint8_t eye_offset = 50;
-
+    DRAW_FILL fill = DRAW_FILL_FULL;
+    while(true){
+        Paint_Clear(0x5555);
+        Paint_Clear(0x5555);
+    }
     while (true) {
         // printf("Hello, world!\n");
         // sleep_ms(1000);
@@ -95,30 +85,30 @@ int main()
         // Paint_Clear(BLUE);
         for(uint8_t r = radius_start; r < radius_end; r+=radius_step){
             SelectScreenR();
-            Paint_DrawCircle(x_start, 150, r, CYAN, DRAW_FILL_FULL);
+            Paint_DrawCircle(x_start, 150, r, CYAN, fill);
             SelectScreenL();
-            Paint_DrawCircle(x_start-eye_offset, 150, r, CYAN, DRAW_FILL_FULL);
+            Paint_DrawCircle(x_start-eye_offset, 150, r, CYAN, fill);
         }
 
         for(uint8_t x = x_start; x < x_end; x+=side_step){
             SelectScreenR();
-            Paint_DrawCircle(x, 150, radius_end, CYAN, DRAW_FILL_FULL);
+            Paint_DrawCircle(x, 150, radius_end, CYAN, fill);
             SelectScreenL();
-            Paint_DrawCircle(x-eye_offset, 150, radius_end, CYAN, DRAW_FILL_FULL);
+            Paint_DrawCircle(x-eye_offset, 150, radius_end, CYAN, fill);
         }
 
         for(uint8_t r = radius_end; r > radius_start; r-=radius_step){
             SelectScreenR();
-            Paint_DrawCircle(x_end, 150, r, CYAN, DRAW_FILL_FULL);
+            Paint_DrawCircle(x_end, 150, r, CYAN, fill);
             SelectScreenL();
-            Paint_DrawCircle(x_end-eye_offset, 150, r, CYAN, DRAW_FILL_FULL);
+            Paint_DrawCircle(x_end-eye_offset, 150, r, CYAN, fill);
         }
 
         for(uint8_t x = x_end; x > x_start; x-=side_step){
             SelectScreenR();
-            Paint_DrawCircle(x, 150, radius_start, CYAN, DRAW_FILL_FULL);
+            Paint_DrawCircle(x, 150, radius_start, CYAN, fill);
             SelectScreenL();
-            Paint_DrawCircle(x-eye_offset, 150, radius_start, CYAN, DRAW_FILL_FULL);
+            Paint_DrawCircle(x-eye_offset, 150, radius_start, CYAN, fill);
         }
         // Paint_DrawRectangle(0, 0, 220, 220, RED, DRAW_FILL_FULL);
         // Paint_DrawRectangle(0, 0, 220, 220, BLUE, DRAW_FILL_FULL);
