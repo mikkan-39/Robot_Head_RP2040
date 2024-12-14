@@ -25,23 +25,8 @@ void Bitmap_Init(DISPLAY_BITMAP *Bitmap, uint16_t PrimaryColor,
   Bitmap->PrimaryColor = PrimaryColor;
   Bitmap->SecondaryColor = SecondaryColor;
   Bitmap->BackgroundColor = BackgroundColor;
-  Bitmap->Initialize();
-}
-
-// function: Get bits and convert bitmap palette to 16-bit color
-static uint16_t ConvertBitmapPixelToColor(DISPLAY_BITMAP *bitmap,
-                                          uint8_t bits) {
-  uint8_t trunc = bits & (2 ^ bitmap->_bitsPerColor - 1);
-  switch (trunc) {
-  case 0b11:
-    return bitmap->PrimaryColor;
-  case 0b01:
-    return bitmap->SecondaryColor;
-  case 0b10:
-    return bitmap->ReservedColor;
-  default:
-    return bitmap->BackgroundColor;
-  }
+  Bitmap->UpdateColorLookup();
+  Bitmap->Clear();
 }
 
 // function:	Draw a line of arbitrary slope
@@ -154,10 +139,10 @@ void Bitmap_DrawCircle(DISPLAY_BITMAP *Bitmap, uint16_t X_Center,
 void DrawEye(uint8_t X, uint8_t Y, uint8_t Radius) {
   uint8_t r_eye_offset = 15;
   uint8_t l_eye_offset = 15;
-  BitmapRight.Initialize();
+  BitmapRight.Clear();
   Bitmap_DrawCircle(&BitmapRight, X + r_eye_offset, Y, Radius, CYAN,
                     DRAW_FILL_FULL);
-  BitmapLeft.Initialize();
+  BitmapLeft.Clear();
   Bitmap_DrawCircle(&BitmapLeft, X - l_eye_offset, Y, Radius, CYAN,
                     DRAW_FILL_FULL);
   BitmapsSend();
@@ -207,37 +192,36 @@ void BitmapsSend() {
        byteIndex++) {
     uint8_t currentByte = BitmapRight.BitmapData[byteIndex];
 
-    LCD_WriteData_Word(ConvertBitmapPixelToColor(&BitmapRight, currentByte));
-    LCD_WriteData_Word(
-        ConvertBitmapPixelToColor(&BitmapRight, currentByte >> 2));
-    LCD_WriteData_Word(
-        ConvertBitmapPixelToColor(&BitmapRight, currentByte >> 4));
-    LCD_WriteData_Word(
-        ConvertBitmapPixelToColor(&BitmapRight, currentByte >> 6));
-  }
+    // Extract each 2-bit pixel from the byte
+    uint8_t pixel0 = currentByte & 0x03;        // Extract bits 0-1
+    uint8_t pixel1 = (currentByte >> 2) & 0x03; // Extract bits 2-3
+    uint8_t pixel2 = (currentByte >> 4) & 0x03; // Extract bits 4-5
+    uint8_t pixel3 = (currentByte >> 6) & 0x03; // Extract bits 6-7
 
-  // for (int y = 0; y < LCD_HEIGHT; y++) {
-  //   for (int x = 0; x < LCD_WIDTH; x++) {
-  //     LCD_WriteData_Word(BitmapRight.GetPixel(x, y));
-  //   }
-  // }
+    // Convert and write all four pixels
+    LCD_WriteData_Word(BitmapRight.colorLookup[pixel0]);
+    LCD_WriteData_Word(BitmapRight.colorLookup[pixel1]);
+    LCD_WriteData_Word(BitmapRight.colorLookup[pixel2]);
+    LCD_WriteData_Word(BitmapRight.colorLookup[pixel3]);
+  }
 
   SelectScreenL();
   for (int byteIndex = 0; byteIndex < sizeof(BitmapLeft.BitmapData);
        byteIndex++) {
     uint8_t currentByte = BitmapLeft.BitmapData[byteIndex];
 
-    LCD_WriteData_Word(ConvertBitmapPixelToColor(&BitmapLeft, currentByte));
-    LCD_WriteData_Word(
-        ConvertBitmapPixelToColor(&BitmapLeft, currentByte >> 2));
-    LCD_WriteData_Word(
-        ConvertBitmapPixelToColor(&BitmapLeft, currentByte >> 4));
-    LCD_WriteData_Word(
-        ConvertBitmapPixelToColor(&BitmapLeft, currentByte >> 6));
+    // Extract each 2-bit pixel from the byte
+    uint8_t pixel0 = currentByte & 0x03;        // Extract bits 0-1
+    uint8_t pixel1 = (currentByte >> 2) & 0x03; // Extract bits 2-3
+    uint8_t pixel2 = (currentByte >> 4) & 0x03; // Extract bits 4-5
+    uint8_t pixel3 = (currentByte >> 6) & 0x03; // Extract bits 6-7
+
+    // Convert and write all four pixels
+    LCD_WriteData_Word(BitmapLeft.colorLookup[pixel0]);
+    LCD_WriteData_Word(BitmapLeft.colorLookup[pixel1]);
+    LCD_WriteData_Word(BitmapLeft.colorLookup[pixel2]);
+    LCD_WriteData_Word(BitmapLeft.colorLookup[pixel3]);
   }
-  // for (int y = 0; y < LCD_HEIGHT; y++) {
-  //   for (int x = 0; x < LCD_WIDTH; x++) {
-  //     LCD_WriteData_Word(BitmapLeft.GetPixel(x, y));
-  //   }
-  // }
+  
+  DeselectBothScreens();
 }

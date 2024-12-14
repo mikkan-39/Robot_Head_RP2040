@@ -83,17 +83,25 @@ int main() {
   float nextR;
 
   // while (true) {
-  //     SelectScreenL();
-  //     LCD_Clear(0xFFFF);
-  //     SelectScreenR();
-  //     LCD_Clear(0xFFFF);
-  //     SelectScreenL();
-  //     LCD_Clear(0x0000);
-  //     SelectScreenR();
-  //     LCD_Clear(0x0000);
+  //   BitmapRight.BackgroundColor = CYAN;
+  //   BitmapLeft.BackgroundColor = CYAN;
+  //   BitmapRight.UpdateColorLookup();
+  //   BitmapLeft.UpdateColorLookup();
+  //   BitmapsSend();
+
+  //   BitmapRight.BackgroundColor = BLACK;
+  //   BitmapLeft.BackgroundColor = BLACK;
+  //   BitmapRight.UpdateColorLookup();
+  //   BitmapLeft.UpdateColorLookup();
+  //   BitmapsSend();
   // }
 
   while (true) {
+    BitmapRight.PrimaryColor = CYAN;
+    BitmapLeft.PrimaryColor = CYAN;
+    BitmapRight.UpdateColorLookup();
+    BitmapLeft.UpdateColorLookup();
+
     seed = (float)get_rand_16() / (float)0xffff;
     nextX = 120 - 50 + 100 * seed;
     seed = (float)get_rand_16() / (float)0xffff;
@@ -103,15 +111,21 @@ int main() {
 
     Bitmap_MoveEye(restrainedCoords((int)prevX), restrainedCoords((int)nextX),
                    restrainedCoords((int)prevY), restrainedCoords((int)nextY),
-                   (int)prevR, (int)nextR, 2);
+                   (int)prevR, (int)nextR, 5);
 
     prevX = nextX;
     prevY = nextY;
     prevR = nextR;
 
-    // sleep_ms(get_rand_32() & 0x2ff);
+    sleep_ms(get_rand_32() & 0x2ff);
 
     int jiggleCount = (get_rand_32() & 0x3) + 2;
+
+    BitmapRight.PrimaryColor = MAGENTA;
+    BitmapLeft.PrimaryColor = MAGENTA;
+    BitmapRight.UpdateColorLookup();
+    BitmapLeft.UpdateColorLookup();
+
 
     float localX = prevX;
     float localY = prevY;
@@ -122,13 +136,13 @@ int main() {
       Bitmap_MoveEye(restrainedCoords((int)localX),
                      restrainedCoords((int)nextX),
                      restrainedCoords((int)localY),
-                     restrainedCoords((int)nextY), (int)prevR, (int)prevR, 4);
+                     restrainedCoords((int)nextY), (int)prevR, (int)prevR, 1);
 
       localX = nextX;
       localY = nextY;
       prevR = nextR;
 
-      // sleep_ms(get_rand_32() & 0x2ff);
+      sleep_ms(get_rand_32() & 0x2ff);
     }
     prevX = localX;
     prevY = localY;

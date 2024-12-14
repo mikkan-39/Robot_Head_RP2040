@@ -25,28 +25,39 @@ enum ColorMap {
   RESERVED_COLOR = 0b10,
 };
 
+#define _bitsPerColor 2
+#define _pixelMask 0b11
+#define _pixelsPerByte 4
+
 struct DISPLAY_BITMAP {
   static const uint8_t Height = LCD_HEIGHT;
   static const uint8_t Width = LCD_WIDTH;
 
-  static const int _bitsPerColor = 2;
-  static const int _pixelMask = 2 ^ _bitsPerColor - 1;
-  static const int _pixelsPerByte = 8 / _bitsPerColor;
-
-  uint16_t BackgroundColor; // 00
-  uint16_t PrimaryColor;    // 11
-  uint16_t SecondaryColor;  // 01
-  uint16_t ReservedColor;   // 10
+  uint16_t BackgroundColor = BLACK; // 00
+  uint16_t PrimaryColor = CYAN;     // 11
+  uint16_t SecondaryColor = GREEN;  // 01
+  uint16_t ReservedColor = MAGENTA; // 10
 
   uint8_t BitmapData[(Height * Width) / _pixelsPerByte]; // Packed 2-bit array
 
+  uint16_t colorLookup[4] = {BackgroundColor, SecondaryColor, ReservedColor,
+                             PrimaryColor};
+
   // Fill the bitmap dimensions with background color
-  void Initialize() { memset(BitmapData, 0b00000000, sizeof(BitmapData)); }
+  void Clear() { memset(BitmapData, 0b00000000, sizeof(BitmapData)); }
+
+  void UpdateColorLookup() {
+    colorLookup[0] = BackgroundColor;
+    colorLookup[1] = SecondaryColor;
+    colorLookup[3] = PrimaryColor;
+  }
 
   // Set a pixel value (x, y) to a color index (0-3)
   void SetPixel(uint16_t x, uint16_t y, uint8_t colorIndex) {
-    // if (x >= Width || y >= Height || colorIndex >= 2^_bitsPerColor) return;
-    // // Out of bounds
+#ifdef DEBUG
+    if (x >= Width || y >= Height || colorIndex >= 2 ^ _bitsPerColor)
+      return; // Out of bounds
+#endif
 
     size_t pixelIndex = y * Width + x;
     size_t byteIndex = pixelIndex / _pixelsPerByte;
@@ -57,8 +68,11 @@ struct DISPLAY_BITMAP {
   }
 
   // Get a pixel value (x, y) as a color index (0-3)
-  uint16_t GetPixel(uint16_t x, uint16_t y) const {
-    // if (x >= Width || y >= Height) return 0; // Out of bounds
+  uint16_t GetPixel(uint16_t x, uint16_t y) {
+#ifdef DEBUG
+    if (x >= Width || y >= Height)
+      return 0; // Out of bounds
+#endif
 
     size_t pixelIndex = y * Width + x;
     size_t byteIndex = pixelIndex / _pixelsPerByte;

@@ -26,6 +26,13 @@ void SelectBothScreens() {
   // sleep_us(1);
 }
 
+void DeselectBothScreens() {
+  // sleep_us(1);
+  gpio_put_masked((1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2),
+                  !!1 << DEV_CS_PIN | !!1 << DEV_CS_PIN_2);
+  // sleep_us(1);
+}
+
 void lcd_set_dc_cs(bool dc, bool cs) {
   // sleep_us(1);
   gpio_put_masked(
