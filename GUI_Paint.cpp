@@ -31,7 +31,7 @@ void Bitmap_Init(DISPLAY_BITMAP *Bitmap, uint16_t PrimaryColor,
 
 // function:	Draw a line of arbitrary slope
 void Bitmap_DrawLine(DISPLAY_BITMAP *Bitmap, uint16_t Xstart, uint16_t Ystart,
-                     uint16_t Xend, uint16_t Yend, uint16_t Color) {
+                     uint16_t Xend, uint16_t Yend, ColorMap Color) {
   uint16_t Xpoint = Xstart;
   uint16_t Ypoint = Ystart;
 
@@ -46,7 +46,7 @@ void Bitmap_DrawLine(DISPLAY_BITMAP *Bitmap, uint16_t Xstart, uint16_t Ystart,
   int Esp = dx + dy;
 
   for (;;) {
-    LCD_DrawPixel(Xpoint, Ypoint, Color);
+    Bitmap->SetPixel(Xpoint, Ypoint, Color);
     if (2 * Esp >= dy) {
       if (Xpoint == Xend)
         break;
@@ -64,7 +64,7 @@ void Bitmap_DrawLine(DISPLAY_BITMAP *Bitmap, uint16_t Xstart, uint16_t Ystart,
 
 // function:	Draw a rectangle
 void Bitmap_DrawRectangle(DISPLAY_BITMAP *Bitmap, uint16_t X_Center,
-                          uint16_t Y_Center, uint16_t Radius, uint16_t Color,
+                          uint16_t Y_Center, uint16_t Radius, ColorMap Color,
                           DRAW_FILL Filled) {
   int Xstart = std::max(X_Center - Radius, 0);
   int Ystart = std::max(Y_Center - Radius, 0);
@@ -74,11 +74,7 @@ void Bitmap_DrawRectangle(DISPLAY_BITMAP *Bitmap, uint16_t X_Center,
   if (Filled) {
     for (int y = Ystart; y <= Yend; y++) {
       for (int x = Xstart; x <= Xend; x++) {
-        if (x - Xstart > 5 && y - Ystart > 5 && Xend - x > 5 && Yend - y > 5) {
-          Bitmap->SetPixel(x, y, PRIMARY_COLOR);
-        } else {
-          Bitmap->SetPixel(x, y, BACKGROUND_COLOR);
-        }
+        Bitmap->SetPixel(x, y, Color);
       }
     }
   } else {
@@ -91,7 +87,7 @@ void Bitmap_DrawRectangle(DISPLAY_BITMAP *Bitmap, uint16_t X_Center,
 
 // function:	Draw a circle of the specified size at the specified position
 void Bitmap_DrawCircle(DISPLAY_BITMAP *Bitmap, uint16_t X_Center,
-                       uint16_t Y_Center, uint16_t Radius, uint16_t Color,
+                       uint16_t Y_Center, uint16_t Radius, ColorMap Color,
                        DRAW_FILL Draw_Fill) {
   int xoffset;
   int yoffset;
@@ -110,9 +106,7 @@ void Bitmap_DrawCircle(DISPLAY_BITMAP *Bitmap, uint16_t X_Center,
         xoffset = X_Center - x;
         yoffset = Y_Center - y;
         if (xoffset * xoffset + yoffset * yoffset <= Radius * Radius) {
-          Bitmap->SetPixel(x, y, PRIMARY_COLOR);
-        } else {
-          Bitmap->SetPixel(x, y, BACKGROUND_COLOR);
+          Bitmap->SetPixel(x, y, Color);
         }
       }
     }
@@ -124,12 +118,8 @@ void Bitmap_DrawCircle(DISPLAY_BITMAP *Bitmap, uint16_t X_Center,
         offs = xoffset * xoffset + yoffset * yoffset - Radius * Radius;
         if (offs <= 0) {
           if (offs > -Radius * 10) {
-            Bitmap->SetPixel(x, y, PRIMARY_COLOR);
-          } else {
-            Bitmap->SetPixel(x, y, BACKGROUND_COLOR);
+            Bitmap->SetPixel(x, y, Color);
           }
-        } else {
-          Bitmap->SetPixel(x, y, BACKGROUND_COLOR);
         }
       }
     }
@@ -140,10 +130,10 @@ void DrawEye(uint8_t X, uint8_t Y, uint8_t Radius) {
   uint8_t r_eye_offset = 15;
   uint8_t l_eye_offset = 15;
   BitmapRight.Clear();
-  Bitmap_DrawCircle(&BitmapRight, X + r_eye_offset, Y, Radius, CYAN,
+  Bitmap_DrawCircle(&BitmapRight, X + r_eye_offset, Y, Radius, PRIMARY_COLOR,
                     DRAW_FILL_FULL);
   BitmapLeft.Clear();
-  Bitmap_DrawCircle(&BitmapLeft, X - l_eye_offset, Y, Radius, CYAN,
+  Bitmap_DrawCircle(&BitmapLeft, X - l_eye_offset, Y, Radius, PRIMARY_COLOR,
                     DRAW_FILL_FULL);
   BitmapsSend();
 }
@@ -184,10 +174,8 @@ void Bitmap_MoveEye(uint16_t Xstart, uint16_t Xend, uint16_t Ystart,
 
 // fucntion: Convert both bitmaps to colors and send
 void BitmapsSend() {
-  SelectBothScreens();
-  LCD_SetCursor(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
+  LCD_Both_SetCursor(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
 
-  SelectScreenR();
   for (int byteIndex = 0; byteIndex < sizeof(BitmapRight.BitmapData);
        byteIndex++) {
     uint8_t currentByte = BitmapRight.BitmapData[byteIndex];
@@ -199,13 +187,12 @@ void BitmapsSend() {
     uint8_t pixel3 = (currentByte >> 6) & 0x03; // Extract bits 6-7
 
     // Convert and write all four pixels
-    LCD_WriteData_Word(BitmapRight.colorLookup[pixel0]);
-    LCD_WriteData_Word(BitmapRight.colorLookup[pixel1]);
-    LCD_WriteData_Word(BitmapRight.colorLookup[pixel2]);
-    LCD_WriteData_Word(BitmapRight.colorLookup[pixel3]);
+    LCD_WriteData_Word(pio_instance_right, BitmapRight.colorLookup[pixel0]);
+    LCD_WriteData_Word(pio_instance_right, BitmapRight.colorLookup[pixel1]);
+    LCD_WriteData_Word(pio_instance_right, BitmapRight.colorLookup[pixel2]);
+    LCD_WriteData_Word(pio_instance_right, BitmapRight.colorLookup[pixel3]);
   }
 
-  SelectScreenL();
   for (int byteIndex = 0; byteIndex < sizeof(BitmapLeft.BitmapData);
        byteIndex++) {
     uint8_t currentByte = BitmapLeft.BitmapData[byteIndex];
@@ -217,11 +204,9 @@ void BitmapsSend() {
     uint8_t pixel3 = (currentByte >> 6) & 0x03; // Extract bits 6-7
 
     // Convert and write all four pixels
-    LCD_WriteData_Word(BitmapLeft.colorLookup[pixel0]);
-    LCD_WriteData_Word(BitmapLeft.colorLookup[pixel1]);
-    LCD_WriteData_Word(BitmapLeft.colorLookup[pixel2]);
-    LCD_WriteData_Word(BitmapLeft.colorLookup[pixel3]);
+    LCD_WriteData_Word(pio_instance_left, BitmapLeft.colorLookup[pixel0]);
+    LCD_WriteData_Word(pio_instance_left, BitmapLeft.colorLookup[pixel1]);
+    LCD_WriteData_Word(pio_instance_left, BitmapLeft.colorLookup[pixel2]);
+    LCD_WriteData_Word(pio_instance_left, BitmapLeft.colorLookup[pixel3]);
   }
-  
-  DeselectBothScreens();
 }
