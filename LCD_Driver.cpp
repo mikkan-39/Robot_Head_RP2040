@@ -6,27 +6,27 @@
 #include "lcd.pio.h"
 
 void SelectScreenR () {
-  sleep_us(1);
+  lcd_wait_idle(pio0, pio_state_machine);
 	gpio_put_masked((1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!1 << DEV_CS_PIN | !!0 << DEV_CS_PIN_2);
-	sleep_us(1);
+	// sleep_us(1);
 }
 
 void SelectScreenL () {
-  sleep_us(1);
+  lcd_wait_idle(pio0, pio_state_machine);
 	gpio_put_masked((1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!0 << DEV_CS_PIN | !!1 << DEV_CS_PIN_2);
-	sleep_us(1);
+	// sleep_us(1);
 }
 
 void SelectBothScreens () {
-  sleep_us(1);
+  // sleep_us(1);
   gpio_put_masked((1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!0 << DEV_CS_PIN | !!0 << DEV_CS_PIN_2);
-  sleep_us(1);
+  // sleep_us(1);
 }
 
 void lcd_set_dc_cs(bool dc, bool cs) {
-  sleep_us(1);
+  // sleep_us(1);
   gpio_put_masked((1u << DEV_DC_PIN) | (1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!dc << DEV_DC_PIN | !!cs << DEV_CS_PIN | !!cs << DEV_CS_PIN_2);
-  sleep_us(1);
+  // sleep_us(1);
 }
 
 void LCD_Reset(void)
@@ -48,19 +48,19 @@ void LCD_WriteData_Word(UWORD da)
 {
   lcd_put(pio0, pio_state_machine, da >> 8);
   lcd_put(pio0, pio_state_machine, da & 0xff);
-}   
+}  
 
 void LCD_WriteReg(UBYTE da)  
 { 
   lcd_wait_idle(pio0, pio_state_machine);
-  sleep_us(1);
+  // sleep_us(1);
   gpio_put(DEV_DC_PIN, 0);
-  sleep_us(1);
+  // sleep_us(1);
   lcd_put(pio0, pio_state_machine, da);
   lcd_wait_idle(pio0, pio_state_machine);
-  sleep_us(1);
+  // sleep_us(1);
   gpio_put(DEV_DC_PIN, 1);
-  sleep_us(1);
+  // sleep_us(1);
 }
 
 void lcd_write_cmd(const uint8_t *cmd, size_t count) {

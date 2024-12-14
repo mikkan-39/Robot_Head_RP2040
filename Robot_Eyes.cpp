@@ -17,8 +17,8 @@
 
 #define UART_ID uart1
 #define BAUD_RATE 115200
-#define UART_TX_PIN 0
-#define UART_RX_PIN 1
+#define UART_TX_PIN 4
+#define UART_RX_PIN 5
 
 
 #define SERIAL_CLK_DIV 1.f
@@ -49,6 +49,9 @@ int main()
     uart_puts(UART_ID, " Hello, UART!\n");
     // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
 
+    // while (true) {
+    //     uart_puts(UART_ID, "Somebody once told me\n");
+    // }
     
     gpio_init(DEV_CS_PIN);
     gpio_init(DEV_CS_PIN_2);
@@ -80,6 +83,17 @@ int main()
     float nextX;
     float nextY;
     float nextR;
+    
+    // while (true) {
+    //     SelectScreenL();
+    //     LCD_Clear(0xFFFF);
+    //     SelectScreenR();
+    //     LCD_Clear(0xFFFF);
+    //     SelectScreenL();
+    //     LCD_Clear(0x0000);
+    //     SelectScreenR();
+    //     LCD_Clear(0x0000);
+    // }
 
     while (true) {
         seed = (float)get_rand_16()/(float)0xffff;
@@ -99,13 +113,16 @@ int main()
         prevY = nextY;
         prevR = nextR;
 
+
+        sleep_ms(get_rand_32() & 0x2ff);
+        
         int jiggleCount = (get_rand_32() & 0x3)+2;
 
         float localX = prevX;
         float localY = prevY;
         for(int i = 0; i < jiggleCount; i++){
-            nextX = (float)((int)prevX + (get_rand_32() & 0x3f) - 32);
-            nextY = (float)((int)prevY + (get_rand_32() & 0x3f) - 32);
+            nextX = (float)((int)prevX + (get_rand_32() & 0x0f) - 7);
+            nextY = (float)((int)prevY + (get_rand_32() & 0x0f) - 7);
 
             Paint_MoveEye(
                 restrainedCoords((int)localX), restrainedCoords((int)nextX), 
@@ -117,7 +134,7 @@ int main()
             localY = nextY;
             prevR = nextR;
 
-            sleep_ms(get_rand_16() & 0xff);
+            sleep_ms(get_rand_32() & 0x2ff);
         }
         prevX = localX;
         prevY = localY;

@@ -188,14 +188,14 @@ void Paint_MoveEye(UWORD Xstart, UWORD Xend, UWORD Ystart, UWORD Yend, UWORD Rst
 
     
     if(dmax == 0 || steps == 0){
-      LCD_Clear(BLACK);
-      DrawEye(Xpoint, Ypoint, Rpoint, 1);
+      // LCD_Clear(BLACK);
+      DrawEye(Xpoint, Ypoint, Rpoint, 10);
       return;
     }
     
 
     for (int i = 0; i < steps; i++) {
-        DrawEye(Xpoint, Ypoint, Rpoint, i == 0 ? 120 : SideStep+1);
+        DrawEye(Xpoint, Ypoint, Rpoint, i == 0 ? 120 : SideStep+5);
         float progress = (float)i/(float)steps;
         float Xprogress = (Xend - Xstart) * progress;
         float Yprogress = (Yend - Ystart) * progress;
