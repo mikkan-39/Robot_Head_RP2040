@@ -7,10 +7,6 @@
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 
-#define UBYTE   uint8_t
-#define UWORD   uint16_t
-#define UDOUBLE uint32_t
-
 #define LCD_WIDTH   240
 #define LCD_HEIGHT  240
 
@@ -28,15 +24,14 @@ void SelectScreenR();
 void SelectScreenL();
 void SelectBothScreens();
 
-void LCD_WriteData_Byte(UBYTE da); 
-void LCD_WriteData_Word(UWORD da);
-void LCD_WriteReg(UBYTE da);
-
-void LCD_SetCursor(UWORD x1, UWORD y1, UWORD x2,UWORD y2);
-void LCD_DrawPixel(UWORD x, UWORD y, UWORD Color);
+void LCD_WriteData_Byte(uint8_t da); 
+void LCD_WriteData_Word(uint16_t da);
+void LCD_WriteReg(uint8_t da);
 
 void LCD_Init(void);
-void LCD_Clear(UWORD Color);
-void LCD_ClearWindow(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD UWORD);
+void LCD_Clear(uint16_t Color);
+void LCD_SetCursor(uint16_t x1, uint16_t y1, uint16_t x2,uint16_t y2);
+void LCD_DrawPixel(uint16_t x, uint16_t y, uint16_t Color);
+
 
 #endif
