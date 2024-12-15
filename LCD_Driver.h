@@ -1,42 +1,42 @@
 #ifndef __LCD_DRIVER_H
 #define __LCD_DRIVER_H
 
-#include <stdio.h>
-#include <stdint.h>
-#include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
+#include "pico/stdlib.h"
+#include <stdint.h>
+#include <stdio.h>
 
-#define UBYTE   uint8_t
-#define UWORD   uint16_t
-#define UDOUBLE uint32_t
+#define LCD_WIDTH 240
+#define LCD_HEIGHT 240
 
-#define LCD_WIDTH   240
-#define LCD_HEIGHT  240
+#define DEV_CS_PIN_RIGHT 5
+#define DEV_DC_PIN_RIGHT 4
+#define DEV_MOSI_PIN_RIGHT 3
+#define DEV_SCK_PIN_RIGHT 2
 
-#define DEV_CS_PIN  6
-#define DEV_CS_PIN_2  7
+#define DEV_CS_PIN_LEFT 9
+#define DEV_DC_PIN_LEFT 8
+#define DEV_MOSI_PIN_LEFT 7
+#define DEV_SCK_PIN_LEFT 6
 
-#define DEV_DC_PIN  8
 #define DEV_RST_PIN 10
-#define DEV_SCK_PIN  2
-#define DEV_MOSI_PIN 3
 
 #define pio_state_machine 0
+#define pio_instance_right pio0
+#define pio_instance_left pio1
 
-void SelectScreenR();
-void SelectScreenL();
-void SelectBothScreens();
+// void SelectScreenR();
+// void SelectScreenL();
+// void SelectBothScreens();
+// void DeselectBothScreens();
 
-void LCD_WriteData_Byte(UBYTE da); 
-void LCD_WriteData_Word(UWORD da);
-void LCD_WriteReg(UBYTE da);
+void LCD_WriteData_Byte(PIO pio_instance, uint8_t da);
+void LCD_WriteData_Byte_Both(uint8_t da);
+void LCD_WriteData_Word(PIO pio_instance, uint16_t da);
+void LCD_Both_WriteReg(uint8_t da);
 
-void LCD_SetCursor(UWORD x1, UWORD y1, UWORD x2,UWORD y2);
-void LCD_DrawPixel(UWORD x, UWORD y, UWORD Color);
-
-void LCD_Init(void);
-void LCD_Clear(UWORD Color);
-void LCD_ClearWindow(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD UWORD);
+void LCD_Both_Init(void);
+void LCD_Both_SetCursor(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 
 #endif

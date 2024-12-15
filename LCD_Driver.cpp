@@ -1,36 +1,24 @@
 #include "LCD_Driver.h"
-#include "pico/stdlib.h"
-#include "hardware/spi.h"
-#include "hardware/pio.h"
 #include "hardware/gpio.h"
+#include "hardware/pio.h"
+#include "hardware/spi.h"
 #include "lcd.pio.h"
-
-void SelectScreenR () {
-  lcd_wait_idle(pio0, pio_state_machine);
-	gpio_put_masked((1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!1 << DEV_CS_PIN | !!0 << DEV_CS_PIN_2);
-	// sleep_us(1);
-}
-
-void SelectScreenL () {
-  lcd_wait_idle(pio0, pio_state_machine);
-	gpio_put_masked((1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!0 << DEV_CS_PIN | !!1 << DEV_CS_PIN_2);
-	// sleep_us(1);
-}
-
-void SelectBothScreens () {
-  // sleep_us(1);
-  gpio_put_masked((1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!0 << DEV_CS_PIN | !!0 << DEV_CS_PIN_2);
-  // sleep_us(1);
-}
+#include "pico/stdlib.h"
 
 void lcd_set_dc_cs(bool dc, bool cs) {
-  // sleep_us(1);
-  gpio_put_masked((1u << DEV_DC_PIN) | (1u << DEV_CS_PIN) | (1u << DEV_CS_PIN_2), !!dc << DEV_DC_PIN | !!cs << DEV_CS_PIN | !!cs << DEV_CS_PIN_2);
-  // sleep_us(1);
+  lcd_wait_idle(pio_instance_right, pio_state_machine);
+  lcd_wait_idle(pio_instance_left, pio_state_machine);
+
+  // gpio_put_masked((1u << DEV_DC_PIN_RIGHT) | (1u << DEV_DC_PIN_LEFT) |
+  //                     (1u << DEV_CS_PIN_RIGHT) | (1u << DEV_CS_PIN_LEFT),
+  //                 !!dc << DEV_DC_PIN_RIGHT | !!dc << DEV_DC_PIN_LEFT |
+  //                     !!cs << DEV_CS_PIN_RIGHT | !!cs << DEV_CS_PIN_LEFT);
+
+  gpio_put_masked((1u << DEV_DC_PIN_RIGHT) | (1u << DEV_DC_PIN_LEFT),
+                  !!dc << DEV_DC_PIN_RIGHT | !!dc << DEV_DC_PIN_LEFT);
 }
 
-void LCD_Reset(void)
-{
+void LCD_Reset(void) {
   sleep_ms(100);
   gpio_put(DEV_RST_PIN, 0);
   sleep_ms(100);
@@ -38,62 +26,85 @@ void LCD_Reset(void)
   sleep_ms(100);
 }
 
-void LCD_WriteData_Byte(UBYTE da) 
-{ 
-  lcd_put(pio0, pio_state_machine, da);
-  lcd_wait_idle(pio0, pio_state_machine);
-}  
-
-void LCD_WriteData_Word(UWORD da)
-{
-  lcd_put(pio0, pio_state_machine, da >> 8);
-  lcd_put(pio0, pio_state_machine, da & 0xff);
-}  
-
-void LCD_WriteReg(UBYTE da)  
-{ 
-  lcd_wait_idle(pio0, pio_state_machine);
-  // sleep_us(1);
-  gpio_put(DEV_DC_PIN, 0);
-  // sleep_us(1);
-  lcd_put(pio0, pio_state_machine, da);
-  lcd_wait_idle(pio0, pio_state_machine);
-  // sleep_us(1);
-  gpio_put(DEV_DC_PIN, 1);
-  // sleep_us(1);
+void LCD_WriteData_Byte(PIO pio_instance, uint8_t da) {
+  lcd_put(pio_instance, pio_state_machine, da);
+  lcd_wait_idle(pio_instance, pio_state_machine);
 }
 
-void lcd_write_cmd(const uint8_t *cmd, size_t count) {
-  lcd_wait_idle(pio0, pio_state_machine);
+void LCD_WriteData_Byte_Both(uint8_t da) {
+  lcd_put(pio_instance_right, pio_state_machine, da);
+  lcd_put(pio_instance_left, pio_state_machine, da);
+  lcd_wait_idle(pio_instance_right, pio_state_machine);
+  lcd_wait_idle(pio_instance_left, pio_state_machine);
+}
+
+void LCD_WriteData_Word(PIO pio_instance, uint16_t da) {
+  lcd_put(pio_instance, pio_state_machine, da >> 8);
+  lcd_put(pio_instance, pio_state_machine, da & 0xff);
+}
+
+void LCD_Both_WriteReg(uint8_t da) {
+  lcd_wait_idle(pio_instance_right, pio_state_machine);
+  lcd_wait_idle(pio_instance_left, pio_state_machine);
+
+  gpio_put(DEV_DC_PIN_RIGHT, 0);
+  gpio_put(DEV_DC_PIN_LEFT, 0);
+
+  lcd_put(pio_instance_right, pio_state_machine, da);
+  lcd_put(pio_instance_left, pio_state_machine, da);
+
+  lcd_wait_idle(pio_instance_right, pio_state_machine);
+  lcd_wait_idle(pio_instance_left, pio_state_machine);
+
+  gpio_put(DEV_DC_PIN_RIGHT, 1);
+  gpio_put(DEV_DC_PIN_LEFT, 1);
+}
+
+void lcd_write_both_cmd(const uint8_t *cmd, size_t count) {
+  lcd_wait_idle(pio_instance_right, pio_state_machine);
+  lcd_wait_idle(pio_instance_left, pio_state_machine);
+
   lcd_set_dc_cs(0, 0);
-  lcd_put(pio0, pio_state_machine, *cmd++);
+
+  uint8_t next = *cmd++;
+  lcd_put(pio_instance_right, pio_state_machine, next);
+  lcd_put(pio_instance_left, pio_state_machine, next);
+
   if (count >= 2) {
-      lcd_wait_idle(pio0, pio_state_machine);
-      lcd_set_dc_cs(1, 0);
-      for (size_t i = 0; i < count - 1; ++i)
-          lcd_put(pio0, pio_state_machine, *cmd++);
+    lcd_wait_idle(pio_instance_right, pio_state_machine);
+    lcd_wait_idle(pio_instance_left, pio_state_machine);
+
+    lcd_set_dc_cs(1, 0);
+    for (size_t i = 0; i < count - 1; ++i) {
+      uint8_t next = *cmd++;
+      lcd_put(pio_instance_right, pio_state_machine, next);
+      lcd_put(pio_instance_left, pio_state_machine, next);
+    }
   }
-  lcd_wait_idle(pio0, pio_state_machine);
+
+  lcd_wait_idle(pio_instance_right, pio_state_machine);
+  lcd_wait_idle(pio_instance_left, pio_state_machine);
+
   lcd_set_dc_cs(1, 1);
 }
 
 void lcd_pipe_commands(const uint8_t *init_seq) {
   const uint8_t *cmd = init_seq;
   while (*cmd) {
-      lcd_write_cmd(cmd + 2, *cmd);
-      sleep_ms(*(cmd + 1) * 5);
-      cmd += *cmd + 2;
+    lcd_write_both_cmd(cmd + 2, *cmd);
+    sleep_ms(*(cmd + 1) * 5);
+    cmd += *cmd + 2;
   }
 }
 
 /******************************************************************************
-function: 
+function:
     Common register initialization
 ******************************************************************************/
-void LCD_Init(void)
-{
+void LCD_Both_Init(void) {
   LCD_Reset();
 
+  // clang-format off
   const uint8_t init_seq[] = {
     1, 1, 0xEF,                       
     2, 1, 0xEB, 0x14,                  
@@ -147,81 +158,26 @@ void LCD_Init(void)
     1, 5, 0x29,          
     0                                   
   };
+  // clang-format on
 
   lcd_pipe_commands(init_seq);
-} 
-
-/******************************************************************************
-function: Set the cursor position
-parameter :
-    Xstart:   Start UWORD x coordinate
-    Ystart:   Start UWORD y coordinate
-    Xend  :   End UWORD coordinates
-    Yend  :   End UWORD coordinatesen
-******************************************************************************/
-void LCD_SetCursor(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD  Yend)
-{ 
-  LCD_WriteReg(0x2a);
-  LCD_WriteData_Byte(0x00);
-  LCD_WriteData_Byte(Xstart);
-  LCD_WriteData_Byte(0x00);  
-  LCD_WriteData_Byte(Xend);/*********Xend-1********/
-  
-  LCD_WriteReg(0x2b);
-  LCD_WriteData_Byte(0x00);
-  LCD_WriteData_Byte(Ystart);
-  LCD_WriteData_Byte(0x00);
-  LCD_WriteData_Byte(Yend);
-  
-  LCD_WriteReg(0x2c);
+  LCD_Both_SetCursor(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
 }
 
-/******************************************************************************
-function: Clear screen function, refresh the screen to a certain color
-parameter :
-    Color :   The color you want to clear all the screen
-******************************************************************************/
-void LCD_Clear(UWORD Color)
-{
-  UWORD i,j;    
-  LCD_SetCursor(0,0,LCD_WIDTH-1,LCD_HEIGHT-1);
-  for(i = 0; i < LCD_WIDTH; i++){
-    for(j = 0; j < LCD_HEIGHT; j++){
-      LCD_WriteData_Word(Color);
-    }
-   }
+// function: Set the current draw box
+void LCD_Both_SetCursor(uint16_t Xstart, uint16_t Ystart, uint16_t Xend,
+                        uint16_t Yend) {
+  LCD_Both_WriteReg(0x2a);
+  LCD_WriteData_Byte_Both(0x00);
+  LCD_WriteData_Byte_Both(Xstart);
+  LCD_WriteData_Byte_Both(0x00);
+  LCD_WriteData_Byte_Both(Xend);
+
+  LCD_Both_WriteReg(0x2b);
+  LCD_WriteData_Byte_Both(0x00);
+  LCD_WriteData_Byte_Both(Ystart);
+  LCD_WriteData_Byte_Both(0x00);
+  LCD_WriteData_Byte_Both(Yend);
+
+  LCD_Both_WriteReg(0x2c);
 }
-
-/******************************************************************************
-function: Refresh a certain area to the same color
-parameter :
-    Xstart:   Start UWORD x coordinate
-    Ystart:   Start UWORD y coordinate
-    Xend  :   End UWORD coordinates
-    Yend  :   End UWORD coordinates
-    color :   Set the color
-******************************************************************************/
-void LCD_ClearWindow(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend, UWORD color)
-{          
-  UWORD i,j; 
-  LCD_SetCursor(Xstart, Ystart, Xend-1,Yend-1);
-  for(i = Ystart; i <= Yend-1; i++){                                
-    for(j = Xstart; j <= Xend-1; j++){
-      LCD_WriteData_Word(color);
-    }
-  }                   
-}
-
-/******************************************************************************
-function: Draw a Pixel
-parameter :
-    X     :   Set the X coordinate
-    Y     :   Set the Y coordinate
-    Color :   Set the color
-******************************************************************************/
-void LCD_DrawPixel(UWORD x, UWORD y, UWORD Color)
-{
-  LCD_SetCursor(x,y,x,y);
-  LCD_WriteData_Word(Color);      
-} 
-
