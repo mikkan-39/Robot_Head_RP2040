@@ -1,5 +1,6 @@
 #include "hardware/i2c.h"
 #include "hardware/uart.h"
+#include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include <math.h>
 #include <pico/rand.h>
@@ -7,9 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "GUI_Paint.h"
+#include "Core1.h"
 #include "drivers/GpioUtils.h"
 #include "drivers/LCD_Driver.h"
+#include "gui/GUI_Paint.h"
 
 #include "lcd.pio.h"
 
@@ -25,6 +27,11 @@ int main() {
 
   LCD_Both_Init();
 
+  multicore_launch_core1(core1_thread);
+
   while (true) {
+    if (multicore_fifo_rvalid()) {
+      uint32_t data = multicore_fifo_pop_blocking(); // Receive UART data
+    }
   }
 }
