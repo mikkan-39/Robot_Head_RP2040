@@ -8,8 +8,8 @@
 #include <stdlib.h>
 
 #include "GUI_Paint.h"
-#include "GpioUtils.h"
-#include "LCD_Driver.h"
+#include "drivers/GpioUtils.h"
+#include "drivers/LCD_Driver.h"
 
 #include "lcd.pio.h"
 
@@ -26,6 +26,5 @@ int main() {
   LCD_Both_Init();
 
   while (true) {
-    
   }
 }
