@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Robot_Eyes Robot_Eyes.cpp GUI_Paint.cpp LCD_Driver.cpp)
+add_executable(Robot_Eyes Robot_Eyes.cpp GUI_Paint.cpp LCD_Driver.cpp GpioUtils.cpp)
 
 pico_generate_pio_header(Robot_Eyes ${CMAKE_CURRENT_LIST_DIR}/lcd.pio)
 
