@@ -20,7 +20,7 @@
 #define UART_TX_PIN 4
 #define UART_RX_PIN 5
 
-#define SERIAL_CLK_DIV 4.f
+#define SERIAL_CLK_DIV 1.f
 
 uint16_t get_rand_16() { return get_rand_32() & 0x0000ffff; }
 
@@ -76,7 +76,6 @@ int main() {
   Bitmap_Init(&BitmapLeft, MAGENTA, CYAN, BLACK);
 
   LCD_Both_Init();
-  BitmapsSend();
 
   float prevX = 120;
   float prevY = 120;
@@ -86,22 +85,22 @@ int main() {
   float nextY;
   float nextR;
 
-  while (true) {
-    BitmapRight.BackgroundColor = CYAN;
-    BitmapLeft.BackgroundColor = CYAN;
-    BitmapRight.UpdateColorLookup();
-    BitmapLeft.UpdateColorLookup();
-    BitmapsSend();
+  // while (true) {
+  //   BitmapRight.BackgroundColor = MAGENTA;
+  //   BitmapLeft.BackgroundColor = WHITE;
+  //   BitmapRight.UpdateColorLookup();
+  //   BitmapLeft.UpdateColorLookup();
+  //   BitmapsSend();
 
-    BitmapRight.BackgroundColor = BLACK;
-    BitmapLeft.BackgroundColor = BLACK;
-    BitmapRight.UpdateColorLookup();
-    BitmapLeft.UpdateColorLookup();
-    BitmapsSend();
-  }
+  //   BitmapRight.BackgroundColor = CYAN;
+  //   BitmapLeft.BackgroundColor = BLACK;
+  //   BitmapRight.UpdateColorLookup();
+  //   BitmapLeft.UpdateColorLookup();
+  //   BitmapsSend();
+  // }
 
   while (true) {
-    BitmapRight.PrimaryColor = CYAN;
+    BitmapRight.PrimaryColor = MAGENTA;
     BitmapLeft.PrimaryColor = CYAN;
     BitmapRight.UpdateColorLookup();
     BitmapLeft.UpdateColorLookup();
@@ -125,7 +124,7 @@ int main() {
 
     int jiggleCount = (get_rand_32() & 0x3) + 2;
 
-    BitmapRight.PrimaryColor = MAGENTA;
+    BitmapRight.PrimaryColor = CYAN;
     BitmapLeft.PrimaryColor = MAGENTA;
     BitmapRight.UpdateColorLookup();
     BitmapLeft.UpdateColorLookup();

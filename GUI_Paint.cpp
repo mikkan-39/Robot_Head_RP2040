@@ -175,38 +175,37 @@ void Bitmap_MoveEye(uint16_t Xstart, uint16_t Xend, uint16_t Ystart,
 // fucntion: Convert both bitmaps to colors and send
 void BitmapsSend() {
   LCD_Both_SetCursor(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
-
   for (int byteIndex = 0; byteIndex < sizeof(BitmapRight.BitmapData);
        byteIndex++) {
-    uint8_t currentByte = BitmapRight.BitmapData[byteIndex];
+    uint8_t currentByteR = BitmapRight.BitmapData[byteIndex];
+    uint8_t currentByteL = BitmapLeft.BitmapData[byteIndex];
 
-    // Extract each 2-bit pixel from the byte
-    uint8_t pixel0 = currentByte & 0x03;        // Extract bits 0-1
-    uint8_t pixel1 = (currentByte >> 2) & 0x03; // Extract bits 2-3
-    uint8_t pixel2 = (currentByte >> 4) & 0x03; // Extract bits 4-5
-    uint8_t pixel3 = (currentByte >> 6) & 0x03; // Extract bits 6-7
+    // Convert and write all pixels
 
-    // Convert and write all four pixels
-    LCD_WriteData_Word(pio_instance_right, BitmapRight.colorLookup[pixel0]);
-    LCD_WriteData_Word(pio_instance_right, BitmapRight.colorLookup[pixel1]);
-    LCD_WriteData_Word(pio_instance_right, BitmapRight.colorLookup[pixel2]);
-    LCD_WriteData_Word(pio_instance_right, BitmapRight.colorLookup[pixel3]);
-  }
+    // Extract bits 0-1
+    uint32_t pixel0 = BitmapRight.colorLookup[currentByteR & 0x03];
+    uint32_t pixel4 = BitmapLeft.colorLookup[currentByteL & 0x03];
 
-  for (int byteIndex = 0; byteIndex < sizeof(BitmapLeft.BitmapData);
-       byteIndex++) {
-    uint8_t currentByte = BitmapLeft.BitmapData[byteIndex];
+    // Extract bits 2-3
+    uint32_t pixel1 = BitmapRight.colorLookup[(currentByteR >> 2) & 0x03];
+    uint32_t pixel5 = BitmapLeft.colorLookup[(currentByteL >> 2) & 0x03];
 
-    // Extract each 2-bit pixel from the byte
-    uint8_t pixel0 = currentByte & 0x03;        // Extract bits 0-1
-    uint8_t pixel1 = (currentByte >> 2) & 0x03; // Extract bits 2-3
-    uint8_t pixel2 = (currentByte >> 4) & 0x03; // Extract bits 4-5
-    uint8_t pixel3 = (currentByte >> 6) & 0x03; // Extract bits 6-7
+    lcd_wait_async(pio_instance_right, pio_state_machine);
+    lcd_wait_async(pio_instance_left, pio_state_machine);
+    lcd_put32_async(pio_instance_right, pio_state_machine, pixel0 << 16 | pixel1);
+    lcd_put32_async(pio_instance_left, pio_state_machine, pixel4 << 16 | pixel5);
+    
+    // Extract bits 4-5
+    uint32_t pixel2 = BitmapRight.colorLookup[(currentByteR >> 4) & 0x03];
+    uint32_t pixel6 = BitmapLeft.colorLookup[(currentByteL >> 4) & 0x03];
 
-    // Convert and write all four pixels
-    LCD_WriteData_Word(pio_instance_left, BitmapLeft.colorLookup[pixel0]);
-    LCD_WriteData_Word(pio_instance_left, BitmapLeft.colorLookup[pixel1]);
-    LCD_WriteData_Word(pio_instance_left, BitmapLeft.colorLookup[pixel2]);
-    LCD_WriteData_Word(pio_instance_left, BitmapLeft.colorLookup[pixel3]);
+    // Extract bits 6-7
+    uint32_t pixel3 = BitmapRight.colorLookup[(currentByteR >> 6) & 0x03];
+    uint32_t pixel7 = BitmapLeft.colorLookup[(currentByteL >> 6) & 0x03];
+
+    lcd_wait_async(pio_instance_right, pio_state_machine);
+    lcd_wait_async(pio_instance_left, pio_state_machine);
+    lcd_put32_async(pio_instance_right, pio_state_machine, pixel2 << 16 | pixel3);
+    lcd_put32_async(pio_instance_left, pio_state_machine, pixel6 << 16 | pixel7);
   }
 }

@@ -47,6 +47,19 @@ static inline void lcd_put(PIO pio, uint sm, uint8_t x) {
     *(volatile uint8_t*)&pio->txf[sm] = x;
 }
 
+static inline void lcd_wait_async(PIO pio, uint sm) {
+    while (!pio_sm_is_tx_fifo_empty(pio, sm))
+        ;
+}
+
+static inline void lcd_put32_async(PIO pio, uint sm, uint32_t x) {
+    // Send the 32-bit data, broken into 4 bytes
+    *(volatile uint8_t*)&pio->txf[sm] = (x >> 24) & 0xFF; // Send most significant byte
+    *(volatile uint8_t*)&pio->txf[sm] = (x >> 16) & 0xFF; // Send second byte
+    *(volatile uint8_t*)&pio->txf[sm] = (x >> 8) & 0xFF;  // Send third byte
+    *(volatile uint8_t*)&pio->txf[sm] = x & 0xFF;         // Send least significant byte
+}
+
 // SM is done when it stalls on an empty FIFO
 
 static inline void lcd_wait_idle(PIO pio, uint sm) {

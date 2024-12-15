@@ -161,6 +161,7 @@ void LCD_Both_Init(void) {
   // clang-format on
 
   lcd_pipe_commands(init_seq);
+  LCD_Both_SetCursor(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
 }
 
 // function: Set the current draw box
