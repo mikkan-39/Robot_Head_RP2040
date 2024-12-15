@@ -53,4 +53,17 @@ void InitAllGpio() {
   uint offsetPioLeft = pio_add_program(pio_instance_left, &lcd_program);
   lcd_program_init(pio_instance_left, pio_state_machine, offsetPioLeft,
                    DEV_MOSI_PIN_LEFT, DEV_SCK_PIN_LEFT, SERIAL_CLK_DIV);
+
+  if (!TOFsensor.init()) {
+    printf("Failed to detect and initialize sensor!\n");
+  }
+
+  // lower the return signal rate limit (default is 0.25 MCPS)
+  TOFsensor.setSignalRateLimit(0.1);
+  // increase laser pulse periods (defaults are 14 and 10 PCLKs)
+  TOFsensor.setVcselPulsePeriod(VL53L0X::VcselPeriodPreRange, 18);
+  TOFsensor.setVcselPulsePeriod(VL53L0X::VcselPeriodFinalRange, 14);
+
+  // increase timing budget to 200 ms
+  TOFsensor.setMeasurementTimingBudget(20000);
 }

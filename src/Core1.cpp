@@ -16,5 +16,12 @@ void core1_thread() {
       // Forward data to Core 0
       multicore_fifo_push_blocking(uart_data);
     }
+
+    printf("%d", TOFsensor.readRangeSingleMillimeters());
+    if (TOFsensor.timeoutOccurred()) {
+      printf(" TIMEOUT");
+    }
+    printf("\n");
+    sleep_ms(10);
   }
 }
