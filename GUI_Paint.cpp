@@ -148,7 +148,7 @@ void Bitmap_MoveEye(uint16_t Xstart, uint16_t Xend, uint16_t Ystart,
   int dx = (int)Xend - (int)Xstart >= 0 ? Xend - Xstart : Xstart - Xend;
   int dy = (int)Yend - (int)Ystart >= 0 ? Yend - Ystart : Ystart - Yend;
   int dr = (int)Rend - (int)Rstart >= 0 ? Rend - Rstart : Rstart - Rend;
-  int dmax = std::max(std::max(dx, dy), dr);
+  int dmax = std::max(std::max(dx, dy), dr*2);
   int steps = dmax / SideStep;
 
   if (dmax == 0 || steps == 0) {

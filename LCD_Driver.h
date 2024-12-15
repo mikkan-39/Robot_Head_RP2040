@@ -10,15 +10,16 @@
 #define LCD_WIDTH 240
 #define LCD_HEIGHT 240
 
-#define DEV_CS_PIN_RIGHT 5
-#define DEV_DC_PIN_RIGHT 4
-#define DEV_MOSI_PIN_RIGHT 3
-#define DEV_SCK_PIN_RIGHT 2
+#define DEV_CS_PIN_LEFT 5
+#define DEV_DC_PIN_LEFT 4
+#define DEV_MOSI_PIN_LEFT 3
+#define DEV_SCK_PIN_LEFT 2
 
-#define DEV_CS_PIN_LEFT 9
-#define DEV_DC_PIN_LEFT 8
-#define DEV_MOSI_PIN_LEFT 7
-#define DEV_SCK_PIN_LEFT 6
+#define DEV_CS_PIN_RIGHT 29
+#define DEV_DC_PIN_RIGHT 26
+#define DEV_MOSI_PIN_RIGHT 28
+#define DEV_SCK_PIN_RIGHT 27
+
 
 #define DEV_RST_PIN 10
 

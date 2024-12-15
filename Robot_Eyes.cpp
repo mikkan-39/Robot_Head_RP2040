@@ -100,7 +100,7 @@ int main() {
   // }
 
   while (true) {
-    BitmapRight.PrimaryColor = MAGENTA;
+    BitmapRight.PrimaryColor = CYAN;
     BitmapLeft.PrimaryColor = CYAN;
     BitmapRight.UpdateColorLookup();
     BitmapLeft.UpdateColorLookup();
@@ -125,7 +125,7 @@ int main() {
     int jiggleCount = (get_rand_32() & 0x3) + 2;
 
     BitmapRight.PrimaryColor = CYAN;
-    BitmapLeft.PrimaryColor = MAGENTA;
+    BitmapLeft.PrimaryColor = CYAN;
     BitmapRight.UpdateColorLookup();
     BitmapLeft.UpdateColorLookup();
 
