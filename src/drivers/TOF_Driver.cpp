@@ -789,7 +789,12 @@ uint16_t VL53L0X::readRangeSingleMillimeters() {
     }
   }
 
-  return readRangeContinuousMillimeters();
+  //   return readRangeContinuousMillimeters();
+
+  uint16_t range = readReg16Bit(RESULT_RANGE_STATUS + 10);
+
+  writeReg(SYSTEM_INTERRUPT_CLEAR, 0x01);
+  return range;
 }
 
 // Did a timeout occur in one of the read functions since the last call to

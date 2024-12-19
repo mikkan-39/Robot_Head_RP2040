@@ -65,5 +65,5 @@ void InitAllGpio() {
   TOFsensor.setVcselPulsePeriod(VL53L0X::VcselPeriodFinalRange, 14);
 
   // increase timing budget to 200 ms
-  TOFsensor.setMeasurementTimingBudget(20000);
+  TOFsensor.setMeasurementTimingBudget(200000);
 }

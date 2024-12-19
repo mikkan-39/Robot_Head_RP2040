@@ -22,6 +22,6 @@ void core1_thread() {
       printf(" TIMEOUT");
     }
     printf("\n");
-    sleep_ms(10);
+    busy_wait_ms(1);
   }
 }
