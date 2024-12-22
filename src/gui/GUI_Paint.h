@@ -1,7 +1,7 @@
 #ifndef __GUI_PAINT_H
 #define __GUI_PAINT_H
 
-#include "LCD_Driver.h"
+#include "src/drivers/LCD_Driver.h"
 #include <cstring>
 
 #define WHITE 0xFFFF

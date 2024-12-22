@@ -20,7 +20,6 @@
 #define DEV_MOSI_PIN_RIGHT 28
 #define DEV_SCK_PIN_RIGHT 27
 
-
 #define DEV_RST_PIN 10
 
 #define pio_state_machine 0
