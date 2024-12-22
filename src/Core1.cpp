@@ -17,20 +17,6 @@ void core1_thread() {
   filter.begin();
 
   while (true) {
-    // Read data from UART
-    if (uart_is_readable(uart0)) {
-      uint8_t uart_data = uart_getc(uart0);
-
-      // Forward data to Core 0
-      multicore_fifo_push_blocking(uart_data);
-    }
-
-    printf("%d", TOFsensor.readRangeSingleMillimeters());
-    if (TOFsensor.timeoutOccurred()) {
-      printf(" TIMEOUT");
-    }
-    printf("\n");
-
     unsigned long startTime = time_us_64();
     // Считываем данные с акселерометра в единицах G
     accelerometer.readAccelerationGXYZ(ax, ay, az);
@@ -45,6 +31,20 @@ void core1_thread() {
     yaw = filter.getYawDeg();
     pitch = filter.getPitchDeg();
     roll = filter.getRollDeg();
+
+    // Read data from UART
+    if (uart_is_readable(uart0)) {
+      uint8_t uart_data = uart_getc(uart0);
+
+      // Forward data to Core 0
+      multicore_fifo_push_blocking(uart_data);
+    }
+
+    printf("%d", TOFsensor.readRangeSingleMillimeters());
+    if (TOFsensor.timeoutOccurred()) {
+      printf(" TIMEOUT");
+    }
+    printf("\n");
 
     unsigned long deltaTime = time_us_64() - startTime;
     sampleRate = 1000000 / deltaTime;
