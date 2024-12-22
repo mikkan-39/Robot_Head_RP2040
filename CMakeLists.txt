@@ -35,7 +35,19 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Robot_Eyes src/Main.cpp src/Core1.cpp src/gui/GUI_Paint.cpp src/drivers/LCD_Driver.cpp src/drivers/GpioUtils.cpp src/drivers/TOF_Driver.cpp)
+add_executable(Robot_Eyes
+src/Main.cpp
+src/Core1.cpp
+src/gui/GUI_Paint.cpp
+src/drivers/LCD_Driver.cpp
+src/drivers/GpioUtils.cpp
+src/drivers/TOF_Driver.cpp
+src/drivers/IMU/Accelerometer.cpp
+src/drivers/IMU/BaseIMU.cpp
+src/drivers/IMU/Compass.cpp
+src/drivers/IMU/Gyroscope.cpp
+src/drivers/IMU/MadgwickAHRS.cpp 
+)
 
 pico_generate_pio_header(Robot_Eyes ${CMAKE_CURRENT_LIST_DIR}/lcd.pio)
 

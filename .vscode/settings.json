@@ -52,6 +52,7 @@
         "new": "cpp",
         "*.tcc": "cpp",
         "cinttypes": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "cstring": "cpp"
     }
 }

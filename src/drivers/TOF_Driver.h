@@ -170,6 +170,6 @@ private:
                                              uint8_t vcsel_period_pclks);
 };
 
-#endif
-
 extern VL53L0X TOFsensor;
+
+#endif

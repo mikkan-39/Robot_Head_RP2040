@@ -303,7 +303,7 @@ void VL53L0X::writeReg(uint8_t reg, uint8_t value) {
 // Write a 16-bit register
 void VL53L0X::writeReg16Bit(uint8_t reg, uint16_t value) {
   uint8_t data[3] = {reg, (uint8_t)(value >> 8), (uint8_t)(value)};
-  last_status = last_status =
+  last_status =
       i2c_write_blocking(I2C_PORT, address, data, sizeof(data), false);
 }
 
@@ -311,7 +311,7 @@ void VL53L0X::writeReg16Bit(uint8_t reg, uint16_t value) {
 void VL53L0X::writeReg32Bit(uint8_t reg, uint32_t value) {
   uint8_t data[5] = {reg, (uint8_t)(value >> 24), (uint8_t)(value >> 16),
                      (uint8_t)(value >> 8), (uint8_t)(value)};
-  last_status = last_status =
+  last_status =
       i2c_write_blocking(I2C_PORT, address, data, sizeof(data), false);
 }
 

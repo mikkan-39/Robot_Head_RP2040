@@ -1,5 +1,4 @@
 #include "GpioUtils.h"
-#include "TOF_Driver.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "hardware/pio.h"
@@ -14,6 +13,9 @@
 #define UART_RX_PIN 5
 
 #define SERIAL_CLK_DIV 1.f
+
+Gyroscope gyroscope;
+Accelerometer accelerometer;
 
 void InitAllGpio() {
   // Set up our I2C
@@ -53,6 +55,9 @@ void InitAllGpio() {
   uint offsetPioLeft = pio_add_program(pio_instance_left, &lcd_program);
   lcd_program_init(pio_instance_left, pio_state_machine, offsetPioLeft,
                    DEV_MOSI_PIN_LEFT, DEV_SCK_PIN_LEFT, SERIAL_CLK_DIV);
+
+  gyroscope.begin();
+  accelerometer.begin();
 
   if (!TOFsensor.init()) {
     printf("Failed to detect and initialize sensor!\n");
