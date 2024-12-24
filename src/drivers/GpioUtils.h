@@ -7,7 +7,7 @@
 #include "lcd.pio.h"
 
 #define I2C_PORT i2c0
-#define UART_ID uart1
+#define UART_ID uart0
 
 extern Gyroscope gyroscope;
 extern Accelerometer accelerometer;

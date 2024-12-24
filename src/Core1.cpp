@@ -1,9 +1,4 @@
-#include "drivers/GpioUtils.h"
-#include "hardware/i2c.h"
-#include "hardware/uart.h"
-#include "pico/multicore.h"
-#include "pico/stdlib.h"
-#include <cstdio>
+#include "Core1.h"
 
 Madgwick filter;
 
@@ -13,10 +8,10 @@ float yaw, pitch, roll;
 float sampleRate = 100;
 
 void core1_thread() {
-  //   printf("Core 1: Starting...\n");
   filter.begin();
 
   while (true) {
+
     unsigned long startTime = time_us_64();
     // Считываем данные с акселерометра в единицах G
     accelerometer.readAccelerationGXYZ(ax, ay, az);
@@ -34,17 +29,24 @@ void core1_thread() {
 
     // Read data from UART
     if (uart_is_readable(uart0)) {
-      uint8_t uart_data = uart_getc(uart0);
+      char *uart_data = receive_command_from_uart();
 
+      send_string_via_uart("ACK\n");
+      send_string_via_uart("Forwarding to Core0\n");
+      uart_puts(uart0, uart_data);
       // Forward data to Core 0
-      multicore_fifo_push_blocking(uart_data);
+      send_string_to_core0(uart_data);
     }
 
-    printf("%d", TOFsensor.readRangeSingleMillimeters());
-    if (TOFsensor.timeoutOccurred()) {
-      printf(" TIMEOUT");
-    }
-    printf("\n");
+    uint16_t TOFDistance =
+        TOFsensor.readRangeSingleMillimeters();
+
+    // send_uint16_via_uart(TOFDistance);
+
+    // if (TOFsensor.timeoutOccurred()) {
+    //   send_string_via_uart("TOF TIMEOUT");
+    // }
+    // send_newline_via_uart();
 
     unsigned long deltaTime = time_us_64() - startTime;
     sampleRate = 1000000 / deltaTime;

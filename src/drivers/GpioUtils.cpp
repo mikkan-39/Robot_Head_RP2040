@@ -9,8 +9,8 @@
 #define I2C_SCL 13
 
 #define BAUD_RATE 115200
-#define UART_TX_PIN 4
-#define UART_RX_PIN 5
+#define UART_TX_PIN 0
+#define UART_RX_PIN 1
 
 #define SERIAL_CLK_DIV 1.f
 
@@ -29,7 +29,6 @@ void InitAllGpio() {
   uart_init(UART_ID, BAUD_RATE);
   gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
   gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-  uart_puts(UART_ID, " Hello, UART!\n");
 
   // GPIO
   gpio_init(DEV_CS_PIN_RIGHT);
@@ -48,27 +47,35 @@ void InitAllGpio() {
   gpio_put(DEV_RST_PIN, 1);
 
   // PIO
-  uint offsetPioRight = pio_add_program(pio_instance_right, &lcd_program);
-  lcd_program_init(pio_instance_right, pio_state_machine, offsetPioRight,
-                   DEV_MOSI_PIN_RIGHT, DEV_SCK_PIN_RIGHT, SERIAL_CLK_DIV);
+  uint offsetPioRight =
+      pio_add_program(pio_instance_right, &lcd_program);
+  lcd_program_init(pio_instance_right, pio_state_machine,
+                   offsetPioRight, DEV_MOSI_PIN_RIGHT,
+                   DEV_SCK_PIN_RIGHT, SERIAL_CLK_DIV);
 
-  uint offsetPioLeft = pio_add_program(pio_instance_left, &lcd_program);
-  lcd_program_init(pio_instance_left, pio_state_machine, offsetPioLeft,
-                   DEV_MOSI_PIN_LEFT, DEV_SCK_PIN_LEFT, SERIAL_CLK_DIV);
+  uint offsetPioLeft =
+      pio_add_program(pio_instance_left, &lcd_program);
+  lcd_program_init(pio_instance_left, pio_state_machine,
+                   offsetPioLeft, DEV_MOSI_PIN_LEFT,
+                   DEV_SCK_PIN_LEFT, SERIAL_CLK_DIV);
 
-  gyroscope.begin();
-  accelerometer.begin();
+  // gyroscope.begin();
+  // accelerometer.begin();
 
-  if (!TOFsensor.init()) {
-    printf("Failed to detect and initialize sensor!\n");
-  }
+  // if (!TOFsensor.init()) {
+  //   printf("Failed to detect and initialize sensor!\n");
+  // }
 
-  // lower the return signal rate limit (default is 0.25 MCPS)
-  TOFsensor.setSignalRateLimit(0.1);
-  // increase laser pulse periods (defaults are 14 and 10 PCLKs)
-  TOFsensor.setVcselPulsePeriod(VL53L0X::VcselPeriodPreRange, 18);
-  TOFsensor.setVcselPulsePeriod(VL53L0X::VcselPeriodFinalRange, 14);
+  // // lower the return signal rate limit (default is 0.25
+  // // MCPS)
+  // TOFsensor.setSignalRateLimit(0.1);
+  // // increase laser pulse periods (defaults are 14 and 10
+  // // PCLKs)
+  // TOFsensor.setVcselPulsePeriod(
+  //     VL53L0X::VcselPeriodPreRange, 18);
+  // TOFsensor.setVcselPulsePeriod(
+  //     VL53L0X::VcselPeriodFinalRange, 14);
 
-  // increase timing budget to 200 ms
-  TOFsensor.setMeasurementTimingBudget(200000);
+  // // increase timing budget to 200 ms
+  // TOFsensor.setMeasurementTimingBudget(200000);
 }

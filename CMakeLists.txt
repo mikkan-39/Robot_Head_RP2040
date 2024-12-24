@@ -38,6 +38,8 @@ pico_sdk_init()
 add_executable(Robot_Eyes
 src/Main.cpp
 src/Core1.cpp
+src/UART_Utils.cpp
+src/MulticoreUtils.cpp
 src/gui/GUI_Paint.cpp
 src/drivers/LCD_Driver.cpp
 src/drivers/GpioUtils.cpp
@@ -55,8 +57,8 @@ pico_set_program_name(Robot_Eyes "Robot_Eyes")
 pico_set_program_version(Robot_Eyes "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(Robot_Eyes 1)
-pico_enable_stdio_usb(Robot_Eyes 0)
+pico_enable_stdio_uart(Robot_Eyes 0)
+pico_enable_stdio_usb(Robot_Eyes 1)
 
 # Add the standard library to the build
 target_link_libraries(Robot_Eyes
