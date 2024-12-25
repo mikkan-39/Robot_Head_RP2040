@@ -1,6 +1,7 @@
 #ifndef _CORE1_H_
 #define _CORE1_H_
 
+#include "CommandParsers.h"
 #include "MulticoreUtils.h"
 #include "UART_Utils.h"
 #include "drivers/GpioUtils.h"

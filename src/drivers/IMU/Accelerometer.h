@@ -24,15 +24,20 @@ constexpr float GRAVITY_EARTH = 9.8;
 
 // Sensor sensitivity depending on selectable full scales
 // Use the datasheet for details
-constexpr float SENS_2G = 1 * 4 / 65536.0f;
-constexpr float SENS_4G = 2 * 4 / 65536.0f;
-constexpr float SENS_8G = 3.9 * 4 / 65536.0f;
+constexpr float SENS_2G = (float)(16384);
+constexpr float SENS_4G = (float)(32768);
+constexpr float SENS_8G = (float)(65536);
 
-enum class AccelerometerRange { RANGE_2G = 1, RANGE_4G = 2, RANGE_8G = 3 };
+enum class AccelerometerRange {
+  RANGE_2G = 1,
+  RANGE_4G = 2,
+  RANGE_8G = 3
+};
 
 class Accelerometer : public BaseIMU {
 public:
-  Accelerometer(uint8_t slaveAddress = LIS331DLH_SLAVE_ADDRESS);
+  Accelerometer(
+      uint8_t slaveAddress = LIS331DLH_SLAVE_ADDRESS);
   void begin();
   void sleep(bool state);
   void setRange(AccelerometerRange range);
@@ -42,8 +47,10 @@ public:
   float readAccelerationAX();
   float readAccelerationAY();
   float readAccelerationAZ();
-  void readAccelerationGXYZ(float &ax, float &ay, float &az);
-  void readAccelerationAXYZ(float &ax, float &ay, float &az);
+  void readAccelerationGXYZ(float &ax, float &ay,
+                            float &az);
+  void readAccelerationAXYZ(float &ax, float &ay,
+                            float &az);
   // DEPRECATED fuctions
   // Use readAccelerationGX instead
   float readGX() { return readAccelerationGX(); }

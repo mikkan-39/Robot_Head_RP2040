@@ -26,15 +26,22 @@ constexpr uint8_t BASE_IMU_OUT_Z_H = 0x2D;
 #ifndef M_PI
 constexpr float M_PI = 3.14159265358979323846f;
 #endif
-constexpr float TWO_PI = 2.0f * M_PI; // Define 2π (6.283185307...)
-constexpr float RAD_TO_DEG =
-    180.0f / M_PI; // Conversion factor: radians to degrees
-constexpr float DEG_TO_RAD =
-    M_PI / 180.0f; // Conversion factor: degrees to radians
+constexpr float TWO_PI =
+    6.283185307179586476925286766559f; // Define 2π
+                                       // (6.283185307...)
+constexpr float RAD_TO_DEG = 180.0f / M_PI; // Conversion
+                                            // factor:
+                                            // radians to
+                                            // degrees
+constexpr float DEG_TO_RAD = M_PI / 180.0f; // Conversion
+                                            // factor:
+                                            // degrees to
+                                            // radians
 
 class BaseIMU {
 public:
-  BaseIMU(uint8_t slaveAddress) : _slaveAddress(slaveAddress) {}
+  BaseIMU(uint8_t slaveAddress)
+      : _slaveAddress(slaveAddress) {}
   void begin(i2c_inst &wire = i2c0_inst);
   uint8_t readDeviceID();
   int16_t readX();
@@ -45,7 +52,8 @@ public:
 protected:
   uint8_t _readByte(uint8_t regAddress);
   void _writeByte(uint8_t regAddress, uint8_t data);
-  void _readBytes(uint8_t regAddress, uint8_t *data, uint8_t length);
+  void _readBytes(uint8_t regAddress, uint8_t *data,
+                  uint8_t length);
   i2c_inst *_wire;
 
 private:

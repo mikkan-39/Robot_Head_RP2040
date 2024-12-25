@@ -38,13 +38,17 @@ struct DISPLAY_BITMAP {
   uint16_t SecondaryColor = GREEN;  // 01
   uint16_t ReservedColor = MAGENTA; // 10
 
-  uint8_t BitmapData[(Height * Width) / _pixelsPerByte]; // Packed 2-bit array
+  uint8_t BitmapData[(Height * Width) /
+                     _pixelsPerByte]; // Packed 2-bit array
 
-  uint16_t colorLookup[4] = {BackgroundColor, SecondaryColor, ReservedColor,
+  uint16_t colorLookup[4] = {BackgroundColor,
+                             SecondaryColor, ReservedColor,
                              PrimaryColor};
 
   // Fill the bitmap dimensions with background color
-  void Clear() { memset(BitmapData, 0b00000000, sizeof(BitmapData)); }
+  void Clear() {
+    memset(BitmapData, 0b00000000, sizeof(BitmapData));
+  }
 
   void UpdateColorLookup() {
     colorLookup[0] = BackgroundColor;
@@ -53,18 +57,22 @@ struct DISPLAY_BITMAP {
   }
 
   // Set a pixel value (x, y) to a color index (0-3)
-  void SetPixel(uint16_t x, uint16_t y, uint8_t colorIndex) {
+  void SetPixel(uint16_t x, uint16_t y,
+                uint8_t colorIndex) {
 #ifdef DEBUG
-    if (x >= Width || y >= Height || colorIndex >= 2 ^ _bitsPerColor)
+    if (x >= Width || y >= Height ||
+        colorIndex >= 2 ^ _bitsPerColor)
       return; // Out of bounds
 #endif
 
     size_t pixelIndex = y * Width + x;
     size_t byteIndex = pixelIndex / _pixelsPerByte;
-    size_t bitOffset = (pixelIndex % _pixelsPerByte) * _bitsPerColor;
+    size_t bitOffset =
+        (pixelIndex % _pixelsPerByte) * _bitsPerColor;
 
     BitmapData[byteIndex] &= ~(_pixelMask << bitOffset);
-    BitmapData[byteIndex] |= (colorIndex & _pixelMask) << bitOffset;
+    BitmapData[byteIndex] |= (colorIndex & _pixelMask)
+                             << bitOffset;
   }
 
   // Get a pixel value (x, y) as a color index (0-3)
@@ -76,9 +84,11 @@ struct DISPLAY_BITMAP {
 
     size_t pixelIndex = y * Width + x;
     size_t byteIndex = pixelIndex / _pixelsPerByte;
-    size_t bitOffset = (pixelIndex % _pixelsPerByte) * _bitsPerColor;
+    size_t bitOffset =
+        (pixelIndex % _pixelsPerByte) * _bitsPerColor;
 
-    uint8_t pixelBits = (BitmapData[byteIndex] >> bitOffset) & _pixelMask;
+    uint8_t pixelBits =
+        (BitmapData[byteIndex] >> bitOffset) & _pixelMask;
     switch (pixelBits) {
     case 0b11:
       return PrimaryColor;
@@ -103,19 +113,29 @@ typedef enum {
   DRAW_FILL_FULL,
 } DRAW_FILL;
 
-static uint16_t ConvertBitmapPixelToColor(DISPLAY_BITMAP *bitmap, uint8_t bits);
+static uint16_t
+ConvertBitmapPixelToColor(DISPLAY_BITMAP *bitmap,
+                          uint8_t bits);
 
-void Bitmap_Init(DISPLAY_BITMAP *Bitmap, uint16_t PrimaryColor,
-                 uint16_t SecondaryColor, uint16_t BackgroundColor);
+void Bitmap_Init(DISPLAY_BITMAP *Bitmap,
+                 uint16_t PrimaryColor,
+                 uint16_t SecondaryColor,
+                 uint16_t BackgroundColor);
 
-void Bitmap_DrawLine(uint16_t Xstart, uint16_t Ystart, uint16_t Xend,
-                     uint16_t Yend, uint16_t Color);
-void Bitmap_DrawRectangle(uint16_t X_Center, uint16_t Y_Center, uint16_t Radius,
-                          uint16_t Color, DRAW_FILL Filled);
-void Bitmap_DrawCircle(uint16_t X_Center, uint16_t Y_Center, uint16_t Radius,
-                       uint16_t Color, DRAW_FILL Draw_Fill);
-void Bitmap_MoveEye(uint16_t Xstart, uint16_t Xend, uint16_t Ystart,
-                    uint16_t Yend, uint16_t Rstart, uint16_t Rend,
+void Bitmap_DrawLine(uint16_t Xstart, uint16_t Ystart,
+                     uint16_t Xend, uint16_t Yend,
+                     uint16_t Color);
+void Bitmap_DrawRectangle(uint16_t X_Center,
+                          uint16_t Y_Center,
+                          uint16_t Radius, uint16_t Color,
+                          DRAW_FILL Filled);
+void Bitmap_DrawCircle(uint16_t X_Center, uint16_t Y_Center,
+                       uint16_t Radius, uint16_t Color,
+                       DRAW_FILL Draw_Fill);
+void DrawEye(uint8_t X, uint8_t Y, uint8_t Radius);
+void Bitmap_MoveEye(uint16_t Xstart, uint16_t Xend,
+                    uint16_t Ystart, uint16_t Yend,
+                    uint16_t Rstart, uint16_t Rend,
                     uint16_t SideStep);
 
 void BitmapsSend();

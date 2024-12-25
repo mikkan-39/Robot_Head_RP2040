@@ -12,9 +12,9 @@ void send_uint16_via_uart(uint16_t value) {
 }
 
 void send_float_via_uart(float value) {
-  char buffer[8]; // Buffer to hold the string
-                  // representation of the float
-  sprintf(buffer, "%.2f", value); // Convert float to string
+  char buffer[16]; // Buffer to hold the string
+                   // representation of the float
+  sprintf(buffer, "%.8f", value); // Convert float to string
                                   // with 2 decimal places
   uart_puts(uart0, buffer); // Send the string via UART
 }

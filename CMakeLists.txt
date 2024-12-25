@@ -39,6 +39,7 @@ add_executable(Robot_Eyes
 src/Main.cpp
 src/Core1.cpp
 src/UART_Utils.cpp
+src/CommandParsers.cpp
 src/MulticoreUtils.cpp
 src/gui/GUI_Paint.cpp
 src/drivers/LCD_Driver.cpp
