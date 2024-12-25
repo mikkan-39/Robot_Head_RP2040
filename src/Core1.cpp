@@ -12,20 +12,20 @@ uint64_t previousEndTime;
 float sampleRate = 100;
 
 void IMU_handler() {
-  send_string_via_uart("IMU: ");
+  send_string_via_uart("Angles xyz: ");
   send_float_via_uart(yaw);
   send_string_via_uart(" ");
   send_float_via_uart(pitch);
   send_string_via_uart(" ");
   send_float_via_uart(roll);
   // send_newline_via_uart();
-  send_string_via_uart(" ACC ");
+  send_string_via_uart(" ACC xyz: ");
   send_float_via_uart(ax);
   send_string_via_uart(" ");
   send_float_via_uart(ay);
   send_string_via_uart(" ");
   send_float_via_uart(az);
-  send_string_via_uart(" GYRO ");
+  send_string_via_uart(" GYRO xyz:");
   send_float_via_uart(gx);
   send_string_via_uart(" ");
   send_float_via_uart(gy);
@@ -34,7 +34,7 @@ void IMU_handler() {
   send_newline_via_uart();
 }
 void TOF_handler() {
-  send_string_via_uart("TOF: ");
+  send_string_via_uart("TOF mm: ");
   send_uint16_via_uart(TOFDistance);
   send_newline_via_uart();
 }

@@ -50,13 +50,16 @@ void parse_draw_command(
       else if (key == 'r') // radius
         eye_settings->radius = value;
 
+      else if (key == 's') // speed
+        eye_settings->speed = value;
+
       else if (key == 'b') // backgroundColor
         eye_settings->backgroundColor = (uint16_t)value;
 
       else if (key == 'p') // primaryColor
         eye_settings->primaryColor = (uint16_t)value;
 
-      else if (key == 's') // secondaryColor
+      else if (key == 'c') // secondaryColor
         eye_settings->secondaryColor = (uint16_t)value;
 
       else if (key == 'u') // reserveColor

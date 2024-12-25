@@ -36,7 +36,7 @@ struct DISPLAY_BITMAP {
   uint16_t BackgroundColor = BLACK; // 00
   uint16_t PrimaryColor = CYAN;     // 11
   uint16_t SecondaryColor = GREEN;  // 01
-  uint16_t ReservedColor = MAGENTA; // 10
+  uint16_t ReservedColor = RED;     // 10
 
   uint8_t BitmapData[(Height * Width) /
                      _pixelsPerByte]; // Packed 2-bit array
@@ -53,6 +53,7 @@ struct DISPLAY_BITMAP {
   void UpdateColorLookup() {
     colorLookup[0] = BackgroundColor;
     colorLookup[1] = SecondaryColor;
+    colorLookup[2] = ReservedColor;
     colorLookup[3] = PrimaryColor;
   }
 
@@ -120,14 +121,16 @@ ConvertBitmapPixelToColor(DISPLAY_BITMAP *bitmap,
 void Bitmap_Init(DISPLAY_BITMAP *Bitmap,
                  uint16_t PrimaryColor,
                  uint16_t SecondaryColor,
-                 uint16_t BackgroundColor);
+                 uint16_t BackgroundColor,
+                 uint16_t ReservedColor);
 
 void Bitmap_DrawLine(uint16_t Xstart, uint16_t Ystart,
                      uint16_t Xend, uint16_t Yend,
                      uint16_t Color);
-void Bitmap_DrawRectangle(uint16_t X_Center,
-                          uint16_t Y_Center,
-                          uint16_t Radius, uint16_t Color,
+void Bitmap_DrawRectangle(DISPLAY_BITMAP *Bitmap,
+                          uint16_t X_start,
+                          uint16_t Y_start, uint16_t X_end,
+                          uint16_t Y_end, ColorMap Color,
                           DRAW_FILL Filled);
 void Bitmap_DrawCircle(uint16_t X_Center, uint16_t Y_Center,
                        uint16_t Radius, uint16_t Color,
@@ -139,5 +142,10 @@ void Bitmap_MoveEye(uint16_t Xstart, uint16_t Xend,
                     uint16_t SideStep);
 
 void BitmapsSend();
+uint16_t getPulsingColor(uint16_t color);
+void DrawInit();
+void DrawError();
+void DrawLoadingBlocking(bool fullReload, int currentX,
+                         int currentY, int currentR);
 
 #endif

@@ -16,13 +16,91 @@
 
 #include "lcd.pio.h"
 
-// Global instance of EyeSettings
-EyeSettings eye_settings = {120,  120,   90,     BLACK,
-                            CYAN, GREEN, MAGENTA};
+EyeSettings desired_settings = {120,   120,  90,    1,
+                                BLACK, CYAN, GREEN, RED};
+EyeSettings current_settings = {120,   120,  1,     1,
+                                BLACK, CYAN, GREEN, RED};
 
-void error_handler() { printf("DRAW ERROR ACK\n"); }
-void loading_handler() { printf("DRAW LOADING ACK\n"); }
-void eyes_handler() { printf("DRAW EYES ACK\n"); }
+enum class SystemStates { INIT = 1, NORMAL = 2, ERROR = 3 };
+SystemStates currentSystemState = SystemStates::INIT;
+
+void bumpCurrentToDesired(EyeSettings *current,
+                          EyeSettings *desired) {
+  // set directly without transition
+  current->speed = desired->speed;
+  current->primaryColor = desired->primaryColor;
+  current->secondaryColor = desired->secondaryColor;
+  current->backgroundColor = desired->backgroundColor;
+  current->reserveColor = desired->reserveColor;
+
+  // Step size determines how much to move per iteration
+  const int step = desired->speed;
+
+  int dx = desired->x - current->x;
+  int dy = desired->y - current->y;
+  int dr = desired->radius - current->radius;
+
+  int max_diff = abs(dx);
+  if (abs(dy) > max_diff) {
+    max_diff = abs(dy);
+  }
+  if (abs(dr) > max_diff) {
+    max_diff = abs(dr);
+  }
+
+  if (max_diff == 0) {
+    return;
+  }
+
+  float scale_x = (float)dx / max_diff;
+  float scale_y = (float)dy / max_diff;
+  float scale_r = (float)dr / max_diff;
+
+  current->x += (int)(step * scale_x);
+  current->y += (int)(step * scale_y);
+  current->radius += (int)(step * scale_r);
+
+  // Prevent overshooting
+  if ((dx > 0 && current->x > desired->x) ||
+      (dx < 0 && current->x < desired->x)) {
+    current->x = desired->x;
+  }
+  if ((dy > 0 && current->y > desired->y) ||
+      (dy < 0 && current->y < desired->y)) {
+    current->y = desired->y;
+  }
+  if ((dr > 0 && current->radius > desired->radius) ||
+      (dr < 0 && current->radius < desired->radius)) {
+    current->radius = desired->radius;
+  }
+}
+
+void error_handler() {
+  printf("DRAW ERROR ACK\n");
+  DrawError();
+  currentSystemState = SystemStates::ERROR;
+}
+
+void loading_handler() {
+  printf("DRAW LOADING ACK\n");
+  BitmapRight.PrimaryColor = current_settings.primaryColor;
+  BitmapLeft.PrimaryColor = current_settings.primaryColor;
+
+  BitmapRight.UpdateColorLookup();
+  BitmapLeft.UpdateColorLookup();
+  DrawLoadingBlocking(
+      currentSystemState != SystemStates::INIT,
+      current_settings.x, current_settings.y,
+      current_settings.radius);
+  printf("LOADING ANIMATION FINISHED\n");
+  currentSystemState = SystemStates::NORMAL;
+}
+
+void eyes_handler() {
+  printf("DRAW EYES ACK\n");
+  SystemStates::NORMAL;
+}
+
 void unknown_handler_draw(const char *cmd) {
   printf("UNKNOWN COMMAND: ");
   printf(cmd);
@@ -38,11 +116,18 @@ int main() {
 
   InitAllGpio();
 
-  Bitmap_Init(&BitmapRight, CYAN, MAGENTA, BLACK);
-  Bitmap_Init(&BitmapLeft, CYAN, MAGENTA, BLACK);
+  Bitmap_Init(&BitmapRight, current_settings.primaryColor,
+              current_settings.secondaryColor,
+              current_settings.backgroundColor,
+              current_settings.reserveColor);
+  Bitmap_Init(&BitmapLeft, current_settings.primaryColor,
+              current_settings.secondaryColor,
+              current_settings.backgroundColor,
+              current_settings.reserveColor);
 
   LCD_Both_Init();
 
+  DrawInit();
   BitmapsSend();
 
   queue_init_with_spinlock(&command_queue, MAX_COMMAND_SIZE,
@@ -50,22 +135,64 @@ int main() {
 
   multicore_launch_core1(core1_thread);
 
+  uint16_t nextColor;
+
   while (true) {
     if (!queue_is_empty(&command_queue)) {
       char *cmd = receive_string_from_core1();
       printf("Command received by core0\n");
-      parse_draw_command(cmd, &eye_settings, error_handler,
-                         loading_handler, eyes_handler,
+      parse_draw_command(cmd, &desired_settings,
+                         error_handler, loading_handler,
+                         eyes_handler,
                          unknown_handler_draw);
     }
 
-    BitmapRight.PrimaryColor = eye_settings.primaryColor;
-    BitmapLeft.PrimaryColor = eye_settings.primaryColor;
+    if (currentSystemState == SystemStates::INIT) {
+      nextColor =
+          getPulsingColor(current_settings.primaryColor);
+      BitmapRight.PrimaryColor = nextColor;
+      BitmapLeft.PrimaryColor = nextColor;
+      BitmapRight.UpdateColorLookup();
+      BitmapLeft.UpdateColorLookup();
+      BitmapsSend();
+    }
 
-    BitmapRight.UpdateColorLookup();
-    BitmapLeft.UpdateColorLookup();
+    if (currentSystemState == SystemStates::ERROR) {
+      nextColor =
+          getPulsingColor(current_settings.reserveColor);
+      BitmapRight.ReservedColor = nextColor;
+      BitmapLeft.ReservedColor = nextColor;
+      BitmapRight.UpdateColorLookup();
+      BitmapLeft.UpdateColorLookup();
+      BitmapsSend();
+    }
 
-    DrawEye(eye_settings.x, eye_settings.y,
-            eye_settings.radius);
+    if (currentSystemState == SystemStates::NORMAL) {
+      bumpCurrentToDesired(&current_settings,
+                           &desired_settings);
+
+      BitmapRight.PrimaryColor =
+          current_settings.primaryColor;
+      BitmapLeft.PrimaryColor =
+          current_settings.primaryColor;
+      BitmapRight.BackgroundColor =
+          current_settings.backgroundColor;
+      BitmapLeft.BackgroundColor =
+          current_settings.backgroundColor;
+      BitmapRight.SecondaryColor =
+          current_settings.secondaryColor;
+      BitmapLeft.SecondaryColor =
+          current_settings.secondaryColor;
+      BitmapRight.ReservedColor =
+          current_settings.reserveColor;
+      BitmapLeft.ReservedColor =
+          current_settings.reserveColor;
+
+      BitmapRight.UpdateColorLookup();
+      BitmapLeft.UpdateColorLookup();
+
+      DrawEye(current_settings.x, current_settings.y,
+              current_settings.radius);
+    }
   }
 }

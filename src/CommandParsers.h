@@ -10,9 +10,10 @@ typedef struct {
   int x;                    // x[int]
   int y;                    // y[int]
   int radius;               // r[int]
+  int speed;                // s[int]
   uint16_t backgroundColor; // b[uint16_t]
   uint16_t primaryColor;    // p[uint16_t]
-  uint16_t secondaryColor;  // s[uint16_t]
+  uint16_t secondaryColor;  // c[uint16_t] (s for speed)
   uint16_t reserveColor;    // u[uint16_t] (r for radius)
 } EyeSettings;
 
