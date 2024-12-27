@@ -135,7 +135,9 @@ void Bitmap_DrawRectangle(DISPLAY_BITMAP *Bitmap,
 void Bitmap_DrawCircle(uint16_t X_Center, uint16_t Y_Center,
                        uint16_t Radius, uint16_t Color,
                        DRAW_FILL Draw_Fill);
-void DrawEye(uint8_t X, uint8_t Y, uint8_t Radius);
+void BitmapsClear();
+void DrawEye(uint8_t X, uint8_t Y, uint8_t Radius,
+             ColorMap ColorCode);
 void Bitmap_MoveEye(uint16_t Xstart, uint16_t Xend,
                     uint16_t Ystart, uint16_t Yend,
                     uint16_t Rstart, uint16_t Rend,

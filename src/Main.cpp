@@ -75,6 +75,23 @@ void bumpCurrentToDesired(EyeSettings *current,
   }
 }
 
+void updateBitmapColors() {
+  BitmapRight.PrimaryColor = current_settings.primaryColor;
+  BitmapLeft.PrimaryColor = current_settings.primaryColor;
+  BitmapRight.BackgroundColor =
+      current_settings.backgroundColor;
+  BitmapLeft.BackgroundColor =
+      current_settings.backgroundColor;
+  BitmapRight.SecondaryColor =
+      current_settings.secondaryColor;
+  BitmapLeft.SecondaryColor =
+      current_settings.secondaryColor;
+  BitmapRight.ReservedColor = current_settings.reserveColor;
+  BitmapLeft.ReservedColor = current_settings.reserveColor;
+  BitmapRight.UpdateColorLookup();
+  BitmapLeft.UpdateColorLookup();
+}
+
 void error_handler() {
   printf("DRAW ERROR ACK\n");
   DrawError();
@@ -83,11 +100,7 @@ void error_handler() {
 
 void loading_handler() {
   printf("DRAW LOADING ACK\n");
-  BitmapRight.PrimaryColor = current_settings.primaryColor;
-  BitmapLeft.PrimaryColor = current_settings.primaryColor;
-
-  BitmapRight.UpdateColorLookup();
-  BitmapLeft.UpdateColorLookup();
+  updateBitmapColors();
   DrawLoadingBlocking(
       currentSystemState != SystemStates::INIT,
       current_settings.x, current_settings.y,
@@ -127,7 +140,15 @@ int main() {
 
   LCD_Both_Init();
 
-  DrawInit();
+  // while (true) {
+  //   current_settings.backgroundColor = CYAN;
+  //   updateBitmapColors();
+  //   BitmapsSend();
+  //   current_settings.backgroundColor = MAGENTA;
+  //   updateBitmapColors();
+  //   BitmapsSend();
+  // };
+
   BitmapsSend();
 
   queue_init_with_spinlock(&command_queue, MAX_COMMAND_SIZE,
@@ -148,51 +169,26 @@ int main() {
     }
 
     if (currentSystemState == SystemStates::INIT) {
-      nextColor =
-          getPulsingColor(current_settings.primaryColor);
-      BitmapRight.PrimaryColor = nextColor;
-      BitmapLeft.PrimaryColor = nextColor;
-      BitmapRight.UpdateColorLookup();
-      BitmapLeft.UpdateColorLookup();
+      DrawInit();
       BitmapsSend();
     }
 
     if (currentSystemState == SystemStates::ERROR) {
       nextColor =
-          getPulsingColor(current_settings.reserveColor);
-      BitmapRight.ReservedColor = nextColor;
-      BitmapLeft.ReservedColor = nextColor;
-      BitmapRight.UpdateColorLookup();
-      BitmapLeft.UpdateColorLookup();
+          getPulsingColor(desired_settings.reserveColor);
+      current_settings.reserveColor = nextColor;
+      updateBitmapColors();
       BitmapsSend();
     }
 
     if (currentSystemState == SystemStates::NORMAL) {
+      BitmapsClear();
       bumpCurrentToDesired(&current_settings,
                            &desired_settings);
-
-      BitmapRight.PrimaryColor =
-          current_settings.primaryColor;
-      BitmapLeft.PrimaryColor =
-          current_settings.primaryColor;
-      BitmapRight.BackgroundColor =
-          current_settings.backgroundColor;
-      BitmapLeft.BackgroundColor =
-          current_settings.backgroundColor;
-      BitmapRight.SecondaryColor =
-          current_settings.secondaryColor;
-      BitmapLeft.SecondaryColor =
-          current_settings.secondaryColor;
-      BitmapRight.ReservedColor =
-          current_settings.reserveColor;
-      BitmapLeft.ReservedColor =
-          current_settings.reserveColor;
-
-      BitmapRight.UpdateColorLookup();
-      BitmapLeft.UpdateColorLookup();
-
+      updateBitmapColors();
       DrawEye(current_settings.x, current_settings.y,
-              current_settings.radius);
+              current_settings.radius, PRIMARY_COLOR);
+      BitmapsSend();
     }
   }
 }

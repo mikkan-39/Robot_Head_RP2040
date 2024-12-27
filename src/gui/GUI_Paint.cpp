@@ -118,8 +118,8 @@ void Bitmap_DrawCircle(DISPLAY_BITMAP *Bitmap,
                               (int)Bitmap->Height - 1);
 
   if (Draw_Fill == DRAW_FILL_FULL) {
-    for (int y = y_boundary_l; y <= y_boundary_h; y++) {
-      for (int x = x_boundary_l; x <= x_boundary_h; x++) {
+    for (int y = y_boundary_l; y < y_boundary_h; y++) {
+      for (int x = x_boundary_l; x < x_boundary_h; x++) {
         xoffset = X_Center - x;
         yoffset = Y_Center - y;
         if (xoffset * xoffset + yoffset * yoffset <=
@@ -145,53 +145,56 @@ void Bitmap_DrawCircle(DISPLAY_BITMAP *Bitmap,
   }
 }
 
-void DrawEye(uint8_t X, uint8_t Y, uint8_t Radius) {
+void BitmapsClear() {
   BitmapRight.Clear();
-  Bitmap_DrawCircle(&BitmapRight, X + r_eye_offset, Y,
-                    Radius, PRIMARY_COLOR, DRAW_FILL_FULL);
   BitmapLeft.Clear();
+}
+
+void DrawEye(uint8_t X, uint8_t Y, uint8_t Radius,
+             ColorMap ColorCode) {
+  Bitmap_DrawCircle(&BitmapRight, X + r_eye_offset, Y,
+                    Radius, ColorCode, DRAW_FILL_FULL);
   Bitmap_DrawCircle(&BitmapLeft, X - l_eye_offset, Y,
-                    Radius, PRIMARY_COLOR, DRAW_FILL_FULL);
-  BitmapsSend();
+                    Radius, ColorCode, DRAW_FILL_FULL);
 }
 
-void Bitmap_MoveEye(uint16_t Xstart, uint16_t Xend,
-                    uint16_t Ystart, uint16_t Yend,
-                    uint16_t Rstart, uint16_t Rend,
-                    uint16_t SideStep) {
-  uint16_t Xpoint = Xstart;
-  uint16_t Ypoint = Ystart;
-  uint16_t Rpoint = Rstart;
+// void Bitmap_MoveEye(uint16_t Xstart, uint16_t Xend,
+//                     uint16_t Ystart, uint16_t Yend,
+//                     uint16_t Rstart, uint16_t Rend,
+//                     uint16_t SideStep) {
+//   uint16_t Xpoint = Xstart;
+//   uint16_t Ypoint = Ystart;
+//   uint16_t Rpoint = Rstart;
 
-  int dx = (int)Xend - (int)Xstart >= 0 ? Xend - Xstart
-                                        : Xstart - Xend;
-  int dy = (int)Yend - (int)Ystart >= 0 ? Yend - Ystart
-                                        : Ystart - Yend;
-  int dr = (int)Rend - (int)Rstart >= 0 ? Rend - Rstart
-                                        : Rstart - Rend;
-  int dmax = std::max(std::max(dx, dy), dr * 2);
-  int steps = dmax / SideStep;
+//   int dx = (int)Xend - (int)Xstart >= 0 ? Xend - Xstart
+//                                         : Xstart - Xend;
+//   int dy = (int)Yend - (int)Ystart >= 0 ? Yend - Ystart
+//                                         : Ystart - Yend;
+//   int dr = (int)Rend - (int)Rstart >= 0 ? Rend - Rstart
+//                                         : Rstart - Rend;
+//   int dmax = std::max(std::max(dx, dy), dr * 2);
+//   int steps = dmax / SideStep;
 
-  if (dmax == 0 || steps == 0) {
-    DrawEye(Xpoint, Ypoint, Rpoint);
-    return;
-  }
+//   if (dmax == 0 || steps == 0) {
+//     DrawEye(Xpoint, Ypoint, Rpoint);
+//     return;
+//   }
 
-  for (int i = 0; i < steps; i++) {
-    DrawEye(Xpoint, Ypoint, Rpoint);
-    float progress = (float)i / (float)steps;
-    float Xprogress = (Xend - Xstart) * progress;
-    float Yprogress = (Yend - Ystart) * progress;
-    float Rprogress = (Rend - Rstart) * progress;
+//   for (int i = 0; i < steps; i++) {
+//     DrawEye(Xpoint, Ypoint, Rpoint);
+//     float progress = (float)i / (float)steps;
+//     float Xprogress = (Xend - Xstart) * progress;
+//     float Yprogress = (Yend - Ystart) * progress;
+//     float Rprogress = (Rend - Rstart) * progress;
 
-    Xpoint = Xstart + (int)Xprogress;
-    Ypoint = Ystart + (int)Yprogress;
-    Rpoint = Rstart + (int)Rprogress;
-  }
+//     Xpoint = Xstart + (int)Xprogress;
+//     Ypoint = Ystart + (int)Yprogress;
+//     Rpoint = Rstart + (int)Rprogress;
+//   }
 
-  if (Rpoint != Rend || Xpoint != Xend || Ypoint != Yend)
-    DrawEye(Xpoint, Ypoint, Rpoint);
-}
+//   if (Rpoint != Rend || Xpoint != Xend || Ypoint != Yend)
+//     DrawEye(Xpoint, Ypoint, Rpoint);
+// }
 
 // fucntion: Convert both bitmaps to colors and send
 void BitmapsSend() {
@@ -302,30 +305,60 @@ void DrawError() {
 }
 
 void DrawInit() {
-  BitmapRight.Clear();
-  Bitmap_DrawRectangle(&BitmapRight, 0, 100, 240, 140,
-                       PRIMARY_COLOR, DRAW_FILL_FULL);
-  BitmapLeft.Clear();
-  Bitmap_DrawRectangle(&BitmapLeft, 0, 100, 240, 140,
-                       PRIMARY_COLOR, DRAW_FILL_FULL);
+  static int radius = 0;
+  static bool flag = false;
+
+  radius += flag ? 5 : 10;
+
+  if (radius >= 150) {
+    radius = 0;
+    flag = !flag;
+  }
+
+  DrawEye(120, 120, radius,
+          flag ? PRIMARY_COLOR : BACKGROUND_COLOR);
+  if (flag) {
+    BitmapRight.PrimaryColor =
+        getDimmedColor(CYAN, radius / 5);
+    BitmapRight.UpdateColorLookup();
+    BitmapLeft.PrimaryColor =
+        getDimmedColor(CYAN, radius / 5);
+    BitmapLeft.UpdateColorLookup();
+  }
 }
 
 void DrawLoadingBlocking(bool fullReload, int currentX,
                          int currentY, int currentR) {
-  for (int x = (fullReload ? 0 : 100); x < 150;
-       x += (fullReload ? 5 : 1)) {
-    Bitmap_DrawRectangle(&BitmapRight, 0, 0, 240, x,
-                         BACKGROUND_COLOR, DRAW_FILL_FULL);
-    Bitmap_DrawRectangle(&BitmapLeft, 0, 0, 240, x,
-                         BACKGROUND_COLOR, DRAW_FILL_FULL);
-    Bitmap_DrawRectangle(&BitmapRight, 0, 240 - x, 240, 240,
-                         BACKGROUND_COLOR, DRAW_FILL_FULL);
-    Bitmap_DrawRectangle(&BitmapLeft, 0, 240 - x, 240, 240,
-                         BACKGROUND_COLOR, DRAW_FILL_FULL);
+  if (fullReload) {
+    for (int x = 0; x < 150; x += 5) {
+      Bitmap_DrawRectangle(&BitmapRight, 0, 0, 240, x,
+                           BACKGROUND_COLOR,
+                           DRAW_FILL_FULL);
+      Bitmap_DrawRectangle(&BitmapLeft, 0, 0, 240, x,
+                           BACKGROUND_COLOR,
+                           DRAW_FILL_FULL);
+      Bitmap_DrawRectangle(&BitmapRight, 0, 240 - x, 240,
+                           240, BACKGROUND_COLOR,
+                           DRAW_FILL_FULL);
+      Bitmap_DrawRectangle(&BitmapLeft, 0, 240 - x, 240,
+                           240, BACKGROUND_COLOR,
+                           DRAW_FILL_FULL);
+      BitmapsSend();
+    }
+    for (int r = 0; r < currentR - 5; r += 5) {
+      DrawEye(currentX, currentY, r, PRIMARY_COLOR);
+      BitmapsSend();
+    }
+    DrawEye(currentX, currentY, currentR, PRIMARY_COLOR);
     BitmapsSend();
+  } else {
+    for (int r = 0; r < 150; r += 10) {
+      DrawEye(120, 120, r, BACKGROUND_COLOR);
+      BitmapsSend();
+    }
+    for (int r = 0; r < currentR; r += 5) {
+      DrawEye(currentX, currentY, r, BACKGROUND_COLOR);
+      BitmapsSend();
+    }
   }
-  for (int r = 0; r < currentR - 5; r += 5) {
-    DrawEye(currentX, currentY, r);
-  }
-  DrawEye(currentX, currentY, currentR);
 }

@@ -80,7 +80,7 @@ void core1_thread() {
 
   previousEndTime = time_us_64();
   // every 10 ms
-  add_repeating_timer_ms(100, IMU_timer_callback, NULL,
+  add_repeating_timer_ms(10, IMU_timer_callback, NULL,
                          &IMUtimer);
   add_repeating_timer_ms(200, TOF_timer_callback, NULL,
                          &TOFtimer);
