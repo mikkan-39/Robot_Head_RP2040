@@ -1,4 +1,4 @@
-#include "Accelerometer.h"
+#include "drivers/IMU/Accelerometer.h"
 
 Accelerometer::Accelerometer(uint8_t slaveAddress)
     : BaseIMU(slaveAddress) {}

@@ -8,11 +8,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "CommandParsers.h"
 #include "Core1.h"
-#include "MulticoreUtils.h"
 #include "drivers/GpioUtils.h"
 #include "gui/GUI_Paint.h"
+#include "multicore/CommandParsers.h"
+#include "multicore/MulticoreUtils.h"
 
 #include "lcd.pio.h"
 

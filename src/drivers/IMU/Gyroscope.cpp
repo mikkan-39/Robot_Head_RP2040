@@ -1,4 +1,4 @@
-#include "Gyroscope.h"
+#include "drivers/IMU/Gyroscope.h"
 
 Gyroscope::Gyroscope(uint8_t slaveAddress)
     : BaseIMU(slaveAddress) {}

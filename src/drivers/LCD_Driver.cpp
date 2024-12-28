@@ -1,4 +1,4 @@
-#include "LCD_Driver.h"
+#include "drivers/LCD_Driver.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
 #include "hardware/spi.h"
@@ -9,13 +9,18 @@ void lcd_set_dc_cs(bool dc, bool cs) {
   lcd_wait_idle(pio_instance_right, pio_state_machine);
   lcd_wait_idle(pio_instance_left, pio_state_machine);
 
-  // gpio_put_masked((1u << DEV_DC_PIN_RIGHT) | (1u << DEV_DC_PIN_LEFT) |
-  //                     (1u << DEV_CS_PIN_RIGHT) | (1u << DEV_CS_PIN_LEFT),
-  //                 !!dc << DEV_DC_PIN_RIGHT | !!dc << DEV_DC_PIN_LEFT |
-  //                     !!cs << DEV_CS_PIN_RIGHT | !!cs << DEV_CS_PIN_LEFT);
+  // gpio_put_masked((1u << DEV_DC_PIN_RIGHT) | (1u <<
+  // DEV_DC_PIN_LEFT) |
+  //                     (1u << DEV_CS_PIN_RIGHT) | (1u <<
+  //                     DEV_CS_PIN_LEFT),
+  //                 !!dc << DEV_DC_PIN_RIGHT | !!dc <<
+  //                 DEV_DC_PIN_LEFT |
+  //                     !!cs << DEV_CS_PIN_RIGHT | !!cs <<
+  //                     DEV_CS_PIN_LEFT);
 
-  gpio_put_masked((1u << DEV_DC_PIN_RIGHT) | (1u << DEV_DC_PIN_LEFT),
-                  !!dc << DEV_DC_PIN_RIGHT | !!dc << DEV_DC_PIN_LEFT);
+  gpio_put_masked(
+      (1u << DEV_DC_PIN_RIGHT) | (1u << DEV_DC_PIN_LEFT),
+      !!dc << DEV_DC_PIN_RIGHT | !!dc << DEV_DC_PIN_LEFT);
 }
 
 void LCD_Reset(void) {
@@ -165,8 +170,8 @@ void LCD_Both_Init(void) {
 }
 
 // function: Set the current draw box
-void LCD_Both_SetCursor(uint16_t Xstart, uint16_t Ystart, uint16_t Xend,
-                        uint16_t Yend) {
+void LCD_Both_SetCursor(uint16_t Xstart, uint16_t Ystart,
+                        uint16_t Xend, uint16_t Yend) {
   LCD_Both_WriteReg(0x2a);
   LCD_WriteData_Byte_Both(0x00);
   LCD_WriteData_Byte_Both(Xstart);

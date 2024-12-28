@@ -1,4 +1,4 @@
-#include "BaseIMU.h"
+#include "drivers/IMU/BaseIMU.h"
 
 uint8_t BaseIMU::readDeviceID() {
   return _readByte(BASE_IMU_WHO_AM_I);

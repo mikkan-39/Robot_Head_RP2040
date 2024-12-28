@@ -28,19 +28,19 @@ set(PICO_BOARD pico CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(Robot_Eyes C CXX ASM)
+project(Robot_Head_RP2040 C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Robot_Eyes
+add_executable(Robot_Head_RP2040
 src/Main.cpp
 src/Core1.cpp
-src/UART_Utils.cpp
-src/CommandParsers.cpp
-src/MulticoreUtils.cpp
+src/multicore/UART_Utils.cpp
+src/multicore/CommandParsers.cpp
+src/multicore/MulticoreUtils.cpp
 src/gui/GUI_Paint.cpp
 src/drivers/LCD_Driver.cpp
 src/drivers/GpioUtils.cpp
@@ -52,26 +52,28 @@ src/drivers/IMU/Gyroscope.cpp
 src/drivers/IMU/MadgwickAHRS.cpp 
 )
 
-pico_generate_pio_header(Robot_Eyes ${CMAKE_CURRENT_LIST_DIR}/lcd.pio)
+target_include_directories(Robot_Head_RP2040 PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 
-pico_set_program_name(Robot_Eyes "Robot_Eyes")
-pico_set_program_version(Robot_Eyes "0.1")
+pico_generate_pio_header(Robot_Head_RP2040 ${CMAKE_CURRENT_LIST_DIR}/lcd.pio)
+
+pico_set_program_name(Robot_Head_RP2040 "Robot_Head_RP2040")
+pico_set_program_version(Robot_Head_RP2040 "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(Robot_Eyes 0)
-pico_enable_stdio_usb(Robot_Eyes 1)
+pico_enable_stdio_uart(Robot_Head_RP2040 0)
+pico_enable_stdio_usb(Robot_Head_RP2040 1)
 
 # Add the standard library to the build
-target_link_libraries(Robot_Eyes
+target_link_libraries(Robot_Head_RP2040
         pico_stdlib)
 
 # Add the standard include files to the build
-target_include_directories(Robot_Eyes PRIVATE
+target_include_directories(Robot_Head_RP2040 PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}
 )
 
 # Add any user requested libraries
-target_link_libraries(Robot_Eyes 
+target_link_libraries(Robot_Head_RP2040 
         hardware_spi
         hardware_i2c
         hardware_pio
@@ -79,5 +81,5 @@ target_link_libraries(Robot_Eyes
         pico_multicore
         )
 
-pico_add_extra_outputs(Robot_Eyes)
+pico_add_extra_outputs(Robot_Head_RP2040)
 

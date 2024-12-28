@@ -1,6 +1,7 @@
-#include "Compass.h"
+#include "drivers/IMU/Compass.h"
 
-Compass::Compass(uint8_t slaveAddress) : BaseIMU(slaveAddress) {}
+Compass::Compass(uint8_t slaveAddress)
+    : BaseIMU(slaveAddress) {}
 
 void Compass::begin() {
   _scalingFactor = 1;
@@ -45,18 +46,26 @@ void Compass::sleep(bool state) {
   if (state)
     data |= LIS3MDL_CTRL_REG3_MD0 | LIS3MDL_CTRL_REG3_MD1;
   else
-    data &= ~(LIS3MDL_CTRL_REG3_MD0 | LIS3MDL_CTRL_REG3_MD1);
+    data &=
+        ~(LIS3MDL_CTRL_REG3_MD0 | LIS3MDL_CTRL_REG3_MD1);
 
   _writeByte(BASE_IMU_CTRL_REG3, data);
 }
 
-float Compass::readMagneticGaussX() { return readX() / _scalingFactor; }
+float Compass::readMagneticGaussX() {
+  return readX() / _scalingFactor;
+}
 
-float Compass::readMagneticGaussY() { return readY() / _scalingFactor; }
+float Compass::readMagneticGaussY() {
+  return readY() / _scalingFactor;
+}
 
-float Compass::readMagneticGaussZ() { return readZ() / _scalingFactor; }
+float Compass::readMagneticGaussZ() {
+  return readZ() / _scalingFactor;
+}
 
-void Compass::readMagneticGaussXYZ(float &mx, float &my, float &mz) {
+void Compass::readMagneticGaussXYZ(float &mx, float &my,
+                                   float &mz) {
   int16_t x, y, z;
   readXYZ(x, y, z);
   mx = x / _scalingFactor;
@@ -64,7 +73,9 @@ void Compass::readMagneticGaussXYZ(float &mx, float &my, float &mz) {
   mz = z / _scalingFactor;
 }
 
-void Compass::readCalibrateMagneticGaussXYZ(float &mx, float &my, float &mz) {
+void Compass::readCalibrateMagneticGaussXYZ(float &mx,
+                                            float &my,
+                                            float &mz) {
   int16_t x, y, z;
   readXYZ(x, y, z);
   mx = x, my = y, mz = z;
@@ -74,10 +85,13 @@ void Compass::readCalibrateMagneticGaussXYZ(float &mx, float &my, float &mz) {
   mz = z / _scalingFactor;
 }
 
-void Compass::setCalibrateMatrix(const float calibrationMatrix[3][3],
-                                 const float calibrationBias[3]) {
-  memcpy(_calibrationBias, calibrationBias, 3 * sizeof(float));
-  memcpy(_calibrationMatrix, calibrationMatrix, 3 * 3 * sizeof(float));
+void Compass::setCalibrateMatrix(
+    const float calibrationMatrix[3][3],
+    const float calibrationBias[3]) {
+  memcpy(_calibrationBias, calibrationBias,
+         3 * sizeof(float));
+  memcpy(_calibrationMatrix, calibrationMatrix,
+         3 * 3 * sizeof(float));
 }
 
 void Compass::_calibrate(float &x, float &y, float &z) {
@@ -89,8 +103,8 @@ void Compass::_calibrate(float &x, float &y, float &z) {
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      calibrationValues[i] +=
-          _calibrationMatrix[i][j] * nonCalibrationValues[j];
+      calibrationValues[i] += _calibrationMatrix[i][j] *
+                              nonCalibrationValues[j];
     }
   }
 

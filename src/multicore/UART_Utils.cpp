@@ -1,4 +1,4 @@
-#include "UART_Utils.h"
+#include "multicore/UART_Utils.h"
 
 void send_string_via_uart(const char *string) {
   uart_puts(uart0, string);

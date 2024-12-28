@@ -1,4 +1,4 @@
-#include "MulticoreUtils.h"
+#include "multicore/MulticoreUtils.h"
 
 queue_t command_queue;
 

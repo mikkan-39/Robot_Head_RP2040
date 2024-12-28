@@ -1,4 +1,4 @@
-#include "GUI_Paint.h"
+#include "gui/GUI_Paint.h"
 #include "hardware/spi.h"
 #include "lcd.pio.h"
 #include "pico/malloc.h"
