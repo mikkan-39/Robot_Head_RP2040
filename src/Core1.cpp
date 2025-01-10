@@ -42,7 +42,7 @@ void TOF_handler() {
   send_newline_via_uart();
 }
 void pingHandler() {
-  send_string_via_uart('PING ACK');
+  send_string_via_uart("PING ACK");
   send_newline_via_uart();
 }
 void unknown_handler_main(const char *cmd) {

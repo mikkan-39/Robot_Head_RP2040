@@ -18,6 +18,7 @@ typedef struct {
 } EyeSettings;
 
 void parse_command(const char *command,
+                   void (*ping_handler)(),
                    void (*imu_handler)(),
                    void (*tof_handler)(),
                    void (*draw_parser)(const char *),
@@ -25,8 +26,8 @@ void parse_command(const char *command,
 
 void parse_draw_command(
     const char *command, EyeSettings *eye_settings,
-    void (*error_handler)(), void (*loading_handler)(),
-    void (*eyes_handler)(),
+    void (*init_handler)(), void (*error_handler)(),
+    void (*loading_handler)(), void (*eyes_handler)(),
     void (*unknown_handler)(const char *));
 
 #endif
