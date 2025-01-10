@@ -1,12 +1,14 @@
 #include "multicore/CommandParsers.h"
 
 void parse_command(const char *command,
+                   void (*ping_handler)(),
                    void (*imu_handler)(),
                    void (*tof_handler)(),
                    void (*draw_parser)(const char *),
                    void (*unknown_handler)(const char *)) {
-
-  if (strcmp(command, "READ_IMU") == 0) {
+  if (strcmp(command, "PING") == 0) {
+    ping_handler();
+  } else if (strcmp(command, "READ_IMU") == 0) {
     imu_handler();
   } else if (strcmp(command, "READ_TOF") == 0) {
     tof_handler();
@@ -20,10 +22,12 @@ void parse_command(const char *command,
 
 void parse_draw_command(
     const char *command, EyeSettings *eye_settings,
-    void (*error_handler)(), void (*loading_handler)(),
-    void (*eyes_handler)(),
+    void (*init_handler)(), void (*error_handler)(),
+    void (*loading_handler)(), void (*eyes_handler)(),
     void (*unknown_handler)(const char *)) {
-  if (strcmp(command, "DRAW_ERROR") == 0) {
+  if (strcmp(command, "DRAW_INIT") == 0) {
+    init_handler();
+  } else if (strcmp(command, "DRAW_ERROR") == 0) {
     error_handler();
   } else if (strcmp(command, "DRAW_LOADING") == 0) {
     loading_handler();

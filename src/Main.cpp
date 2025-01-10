@@ -92,6 +92,11 @@ void updateBitmapColors() {
   BitmapLeft.UpdateColorLookup();
 }
 
+void init_handler() {
+  printf("DRAW INIT ACK\n");
+  currentSystemState = SystemStates::INIT;
+}
+
 void error_handler() {
   printf("DRAW ERROR ACK\n");
   DrawError();
@@ -163,8 +168,8 @@ int main() {
       char *cmd = receive_string_from_core1();
       printf("Command received by core0\n");
       parse_draw_command(cmd, &desired_settings,
-                         error_handler, loading_handler,
-                         eyes_handler,
+                         init_handler, error_handler,
+                         loading_handler, eyes_handler,
                          unknown_handler_draw);
     }
 

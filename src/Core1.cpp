@@ -12,30 +12,37 @@ uint64_t previousEndTime;
 float sampleRate = 100;
 
 void IMU_handler() {
-  send_string_via_uart("Angles xyz: ");
+  send_string_via_uart("READ_IMU: {");
+  send_string_via_uart("yaw: ");
   send_float_via_uart(yaw);
-  send_string_via_uart(" ");
+  send_string_via_uart(", pitch: ");
   send_float_via_uart(pitch);
-  send_string_via_uart(" ");
+  send_string_via_uart(", roll: ");
   send_float_via_uart(roll);
   // send_newline_via_uart();
-  send_string_via_uart(" ACC xyz: ");
+  send_string_via_uart(", ax: ");
   send_float_via_uart(ax);
-  send_string_via_uart(" ");
+  send_string_via_uart(", ay: ");
   send_float_via_uart(ay);
-  send_string_via_uart(" ");
+  send_string_via_uart(", az: ");
   send_float_via_uart(az);
-  send_string_via_uart(" GYRO xyz:");
+  send_string_via_uart(", gx: ");
   send_float_via_uart(gx);
-  send_string_via_uart(" ");
+  send_string_via_uart(", gy: ");
   send_float_via_uart(gy);
-  send_string_via_uart(" ");
+  send_string_via_uart(", gz: ");
   send_float_via_uart(gz);
+  send_string_via_uart("}");
   send_newline_via_uart();
 }
 void TOF_handler() {
-  send_string_via_uart("TOF mm: ");
+  send_string_via_uart("READ_TOF: {distance: ");
   send_uint16_via_uart(TOFDistance);
+  send_string_via_uart("}");
+  send_newline_via_uart();
+}
+void pingHandler() {
+  send_string_via_uart('PING ACK');
   send_newline_via_uart();
 }
 void unknown_handler_main(const char *cmd) {
@@ -88,8 +95,9 @@ void core1_thread() {
   while (true) {
     if (uart_is_readable(uart0)) {
       char *uart_data = receive_command_from_uart();
-      parse_command(uart_data, IMU_handler, TOF_handler,
-                    draw_handler, unknown_handler_main);
+      parse_command(uart_data, pingHandler, IMU_handler,
+                    TOF_handler, draw_handler,
+                    unknown_handler_main);
     }
   }
 }
