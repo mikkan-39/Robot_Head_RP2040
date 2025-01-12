@@ -1,24 +1,26 @@
 #include "Core1.h"
 
-Madgwick filter;
+// Madgwick filter;
 
-float gx, gy, gz, ax, ay, az;
+// Adafruit_NXPSensorFusion filter3; // slowest
+Adafruit_Madgwick filter; // faster than NXP
+Adafruit_Mahony filter2;  // fastest/smalleset
+
+float gx, gy, gz, ax, ay, az, mx, my, mz;
 float yaw, pitch, roll;
 
 uint16_t TOFDistance = 0;
 
-uint64_t previousEndTime;
-
-float sampleRate = 100;
+float sampleRate = 500;
 
 void IMU_handler() {
   send_string_via_uart("READ_IMU: {");
-  send_string_via_uart("yaw: ");
-  send_float_via_uart(yaw);
-  send_string_via_uart(", pitch: ");
+  send_string_via_uart("pitch: ");
   send_float_via_uart(pitch);
   send_string_via_uart(", roll: ");
   send_float_via_uart(roll);
+  send_string_via_uart(", yaw: ");
+  send_float_via_uart(yaw);
   // send_newline_via_uart();
   send_string_via_uart(", ax: ");
   send_float_via_uart(ax);
@@ -32,6 +34,14 @@ void IMU_handler() {
   send_float_via_uart(gy);
   send_string_via_uart(", gz: ");
   send_float_via_uart(gz);
+  // send_string_via_uart(", mx: ");
+  // send_float_via_uart(mx);
+  // send_string_via_uart(", my: ");
+  // send_float_via_uart(my);
+  // send_string_via_uart(", mz: ");
+  // send_float_via_uart(mz);
+  send_string_via_uart(", sampleRate: ");
+  send_float_via_uart(sampleRate);
   send_string_via_uart("}");
   send_newline_via_uart();
 }
@@ -53,19 +63,15 @@ void unknown_handler_main(const char *cmd) {
 #define draw_handler send_string_to_core0
 
 bool IMU_timer_callback(repeating_timer_t *rt) {
-  filter.setFrequency(sampleRate);
   accelerometer.readAccelerationGXYZ(ax, ay, az);
-  gyroscope.readRotationRadXYZ(gx, gy, gz);
+  gyroscope.readRotationDegXYZ(gx, gy, gz);
+  // compass.readCalibrateMagneticGaussXYZ(mx, my, mz);
 
-  filter.update(gx, gy, gz, ax, ay, az);
+  filter.updateIMU(-gx, -gy, -gz, -ax, -ay, -az);
 
-  yaw = filter.getYawDeg();
-  pitch = filter.getPitchDeg();
-  roll = filter.getRollDeg();
-
-  uint64_t deltaTime = time_us_64() - previousEndTime;
-  sampleRate = 1000000.0f / (float)deltaTime;
-  previousEndTime = time_us_64();
+  yaw = filter.getYaw();
+  pitch = filter.getPitch();
+  roll = filter.getRoll();
 
   return true;
 }
@@ -80,17 +86,21 @@ bool TOF_timer_callback(repeating_timer_t *rt) {
 }
 
 void core1_thread() {
-  filter.begin();
+  filter.begin(sampleRate);
 
   struct repeating_timer IMUtimer;
   struct repeating_timer TOFtimer;
 
-  previousEndTime = time_us_64();
-  // every 10 ms
-  add_repeating_timer_ms(10, IMU_timer_callback, NULL,
-                         &IMUtimer);
-  add_repeating_timer_ms(200, TOF_timer_callback, NULL,
-                         &TOFtimer);
+  alarm_pool_t *alarm_pool =
+      alarm_pool_create_with_unused_hardware_alarm(4);
+
+  alarm_pool_add_repeating_timer_us(
+      alarm_pool,
+      static_cast<int>(1000000 / sampleRate) * -1,
+      IMU_timer_callback, NULL, &IMUtimer);
+  alarm_pool_add_repeating_timer_us(alarm_pool, 200000,
+                                    TOF_timer_callback,
+                                    NULL, &TOFtimer);
 
   while (true) {
     if (uart_is_readable(uart0)) {

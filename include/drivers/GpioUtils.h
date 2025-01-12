@@ -11,6 +11,7 @@
 
 extern Gyroscope gyroscope;
 extern Accelerometer accelerometer;
+extern Compass compass;
 
 void InitAllGpio();
 

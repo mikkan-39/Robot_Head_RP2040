@@ -50,6 +50,9 @@ src/drivers/IMU/BaseIMU.cpp
 src/drivers/IMU/Compass.cpp
 src/drivers/IMU/Gyroscope.cpp
 src/drivers/IMU/MadgwickAHRS.cpp 
+src/drivers/AdafruitAHRS/Adafruit_AHRS_Madgwick.cpp
+src/drivers/AdafruitAHRS/Adafruit_AHRS_Mahony.cpp
+# src/drivers/AdafruitAHRS/Adafruit_AHRS_NXPFusion.cpp
 )
 
 target_include_directories(Robot_Head_RP2040 PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
@@ -69,7 +72,7 @@ target_link_libraries(Robot_Head_RP2040
 
 # Add the standard include files to the build
 target_include_directories(Robot_Head_RP2040 PRIVATE
-  ${CMAKE_CURRENT_LIST_DIR}
+  ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
 # Add any user requested libraries

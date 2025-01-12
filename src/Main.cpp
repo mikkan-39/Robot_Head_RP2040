@@ -13,6 +13,7 @@
 #include "gui/GUI_Paint.h"
 #include "multicore/CommandParsers.h"
 #include "multicore/MulticoreUtils.h"
+// #define PICO_TIME_DEFAULT_ALARM_POOL_DISABLED 1
 
 #include "lcd.pio.h"
 

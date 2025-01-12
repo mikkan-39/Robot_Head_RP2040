@@ -16,6 +16,16 @@
 
 Gyroscope gyroscope;
 Accelerometer accelerometer;
+// Compass compass;
+
+// const float compassCalibrationBias[3] = {567.893,
+// -825.35,
+//                                          1061.436};
+
+// const float compassCalibrationMatrix[3][3] = {
+//     {1.909, 0.082, 0.004},
+//     {0.049, 1.942, -0.235},
+//     {-0.003, 0.008, 1.944}};
 
 void InitAllGpio() {
   // Set up our I2C
@@ -61,6 +71,9 @@ void InitAllGpio() {
 
   gyroscope.begin();
   accelerometer.begin();
+  // compass.begin();
+  // compass.setCalibrateMatrix(compassCalibrationMatrix,
+  //                            compassCalibrationBias);
 
   if (!TOFsensor.init()) {
     printf("Failed to detect and initialize sensor!\n");

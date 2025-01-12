@@ -1,6 +1,7 @@
 #ifndef _CORE1_H_
 #define _CORE1_H_
 
+#include "drivers/AdafruitAHRS/Adafruit_AHRS.h"
 #include "drivers/GpioUtils.h"
 #include "hardware/i2c.h"
 #include "hardware/uart.h"
