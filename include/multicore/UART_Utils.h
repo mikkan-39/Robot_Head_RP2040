@@ -7,6 +7,7 @@
 
 void send_string_via_uart(const char *string);
 void send_uint16_via_uart(uint16_t value);
+void send_int_via_uart(int value);
 void send_float_via_uart(float value);
 void send_newline_via_uart();
 char *receive_command_from_uart();

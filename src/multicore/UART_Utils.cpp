@@ -11,6 +11,13 @@ void send_uint16_via_uart(uint16_t value) {
   uart_puts(uart0, buffer);     // Send the string via UART
 }
 
+void send_int_via_uart(int value) {
+  char buffer[8];               // Buffer to hold the string
+                                // representation
+  sprintf(buffer, "%d", value); // Convert integer to string
+  uart_puts(uart0, buffer);     // Send the string via UART
+}
+
 void send_float_via_uart(float value) {
   char buffer[16]; // Buffer to hold the string
                    // representation of the float

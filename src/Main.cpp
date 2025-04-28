@@ -17,117 +17,33 @@
 
 #include "lcd.pio.h"
 
-EyeSettings desired_settings = {120,   120,  90,    1,
-                                BLACK, CYAN, GREEN, RED};
-EyeSettings current_settings = {120,   120,  1,     1,
-                                BLACK, CYAN, GREEN, RED};
+// Adafruit_NXPSensorFusion filter3; // slowest
+Adafruit_Madgwick filter; // faster than NXP
+Adafruit_Mahony filter2;  // fastest/smalleset
 
-enum class SystemStates { INIT = 1, NORMAL = 2, ERROR = 3 };
-SystemStates currentSystemState = SystemStates::INIT;
+float gx, gy, gz, ax, ay, az, mx, my, mz, vx, vy, vz, qx,
+    qy, qz, qw;
+float yaw, pitch, roll;
 
-void bumpCurrentToDesired(EyeSettings *current,
-                          EyeSettings *desired) {
-  // set directly without transition
-  current->speed = desired->speed;
-  current->primaryColor = desired->primaryColor;
-  current->secondaryColor = desired->secondaryColor;
-  current->backgroundColor = desired->backgroundColor;
-  current->reserveColor = desired->reserveColor;
+uint16_t TOFDistance = 0;
 
-  // Step size determines how much to move per iteration
-  const int step = desired->speed;
+float sampleRate = 1000;
 
-  int dx = desired->x - current->x;
-  int dy = desired->y - current->y;
-  int dr = desired->radius - current->radius;
+bool IMU_timer_callback(repeating_timer_t *rt) {
+  accelerometer.readAccelerationGXYZ(ax, ay, az);
+  gyroscope.readRotationDegXYZ(gx, gy, gz);
+  compass.readCalibrateMagneticGaussXYZ(mx, my, mz);
 
-  int max_diff = abs(dx);
-  if (abs(dy) > max_diff) {
-    max_diff = abs(dy);
-  }
-  if (abs(dr) > max_diff) {
-    max_diff = abs(dr);
-  }
+  filter.update(gx, gy, gz, ax, ay, az, mx, my, mz);
 
-  if (max_diff == 0) {
-    return;
-  }
+  yaw = filter.getYaw();
+  pitch = filter.getPitch();
+  roll = filter.getRoll();
 
-  float scale_x = (float)dx / max_diff;
-  float scale_y = (float)dy / max_diff;
-  float scale_r = (float)dr / max_diff;
+  filter.getGravityVector(&vx, &vy, &vz);
+  filter.getQuaternion(&qw, &qx, &qy, &qz);
 
-  current->x += (int)(step * scale_x);
-  current->y += (int)(step * scale_y);
-  current->radius += (int)(step * scale_r);
-
-  // Prevent overshooting
-  if ((dx > 0 && current->x > desired->x) ||
-      (dx < 0 && current->x < desired->x)) {
-    current->x = desired->x;
-  }
-  if ((dy > 0 && current->y > desired->y) ||
-      (dy < 0 && current->y < desired->y)) {
-    current->y = desired->y;
-  }
-  if ((dr > 0 && current->radius > desired->radius) ||
-      (dr < 0 && current->radius < desired->radius)) {
-    current->radius = desired->radius;
-  }
-}
-
-void updateBitmapColors() {
-  BitmapRight.PrimaryColor = current_settings.primaryColor;
-  BitmapLeft.PrimaryColor = current_settings.primaryColor;
-  BitmapRight.BackgroundColor =
-      current_settings.backgroundColor;
-  BitmapLeft.BackgroundColor =
-      current_settings.backgroundColor;
-  BitmapRight.SecondaryColor =
-      current_settings.secondaryColor;
-  BitmapLeft.SecondaryColor =
-      current_settings.secondaryColor;
-  BitmapRight.ReservedColor = current_settings.reserveColor;
-  BitmapLeft.ReservedColor = current_settings.reserveColor;
-  BitmapRight.UpdateColorLookup();
-  BitmapLeft.UpdateColorLookup();
-}
-
-void init_handler() {
-  printf("DRAW INIT ACK\n");
-  currentSystemState = SystemStates::INIT;
-}
-
-void error_handler() {
-  printf("DRAW ERROR ACK\n");
-  DrawError();
-  currentSystemState = SystemStates::ERROR;
-}
-
-void loading_handler() {
-  printf("DRAW LOADING ACK\n");
-  updateBitmapColors();
-  DrawLoadingBlocking(
-      currentSystemState != SystemStates::INIT,
-      current_settings.x, current_settings.y,
-      current_settings.radius);
-  printf("LOADING ANIMATION FINISHED\n");
-  currentSystemState = SystemStates::NORMAL;
-}
-
-void eyes_handler() {
-  printf("DRAW EYES ACK\n");
-  SystemStates::NORMAL;
-}
-
-void unknown_handler_draw(const char *cmd) {
-  printf("UNKNOWN COMMAND: ");
-  printf(cmd);
-  printf("\n");
-}
-
-int restrainedCoords(int coords) {
-  return std::min(std::max(coords, 0), 239);
+  return true;
 }
 
 int main() {
@@ -135,66 +51,60 @@ int main() {
 
   InitAllGpio();
 
-  Bitmap_Init(&BitmapRight, current_settings.primaryColor,
-              current_settings.secondaryColor,
-              current_settings.backgroundColor,
-              current_settings.reserveColor);
-  Bitmap_Init(&BitmapLeft, current_settings.primaryColor,
-              current_settings.secondaryColor,
-              current_settings.backgroundColor,
-              current_settings.reserveColor);
+  compass.setRange(CompassRange::RANGE_4GAUSS);
 
-  LCD_Both_Init();
+  filter.begin(sampleRate);
 
-  // while (true) {
-  //   current_settings.backgroundColor = CYAN;
-  //   updateBitmapColors();
-  //   BitmapsSend();
-  //   current_settings.backgroundColor = MAGENTA;
-  //   updateBitmapColors();
-  //   BitmapsSend();
-  // };
+  struct repeating_timer IMUtimer;
+  struct repeating_timer TOFtimer;
 
-  BitmapsSend();
+  alarm_pool_t *alarm_pool =
+      alarm_pool_create_with_unused_hardware_alarm(4);
 
-  queue_init_with_spinlock(&command_queue, MAX_COMMAND_SIZE,
-                           4, 0);
-
-  multicore_launch_core1(core1_thread);
-
-  uint16_t nextColor;
+  // alarm_pool_add_repeating_timer_us(
+  //     alarm_pool,
+  //     static_cast<int>(1000000 / sampleRate) * -1,
+  //     IMU_timer_callback, NULL, &IMUtimer);
 
   while (true) {
-    if (!queue_is_empty(&command_queue)) {
-      char *cmd = receive_string_from_core1();
-      printf("Command received by core0\n");
-      parse_draw_command(cmd, &desired_settings,
-                         init_handler, error_handler,
-                         loading_handler, eyes_handler,
-                         unknown_handler_draw);
-    }
 
-    if (currentSystemState == SystemStates::INIT) {
-      DrawInit();
-      BitmapsSend();
-    }
+    send_int_via_uart(compass.readX());
+    send_string_via_uart(",");
+    send_int_via_uart(compass.readY());
+    send_string_via_uart(",");
+    send_int_via_uart(compass.readZ());
+    send_newline_via_uart();
+    sleep_ms(100);
 
-    if (currentSystemState == SystemStates::ERROR) {
-      nextColor =
-          getPulsingColor(desired_settings.reserveColor);
-      current_settings.reserveColor = nextColor;
-      updateBitmapColors();
-      BitmapsSend();
-    }
-
-    if (currentSystemState == SystemStates::NORMAL) {
-      BitmapsClear();
-      bumpCurrentToDesired(&current_settings,
-                           &desired_settings);
-      updateBitmapColors();
-      DrawEye(current_settings.x, current_settings.y,
-              current_settings.radius, PRIMARY_COLOR);
-      BitmapsSend();
-    }
+    // send_string_via_uart("READ_IMU: {");
+    // send_string_via_uart("pitch: ");
+    // send_float_via_uart(pitch);
+    // send_string_via_uart(", roll: ");
+    // send_float_via_uart(roll);
+    // send_string_via_uart(", yaw: ");
+    // send_float_via_uart(yaw);
+    // // send_newline_via_uart();
+    // // send_string_via_uart(", ax: ");
+    // // send_float_via_uart(ax);
+    // // send_string_via_uart(", ay: ");
+    // // send_float_via_uart(ay);
+    // // send_string_via_uart(", az: ");
+    // // send_float_via_uart(az);
+    // // send_string_via_uart(", gx: ");
+    // // send_float_via_uart(gx);
+    // // send_string_via_uart(", gy: ");
+    // // send_float_via_uart(gy);
+    // // send_string_via_uart(", gz: ");
+    // // send_float_via_uart(gz);
+    // send_string_via_uart(", mx: ");
+    // send_float_via_uart(mx);
+    // send_string_via_uart(", my: ");
+    // send_float_via_uart(my);
+    // send_string_via_uart(", mz: ");
+    // send_float_via_uart(mz);
+    // // send_string_via_uart(", sampleRate: ");
+    // // send_float_via_uart(sampleRate);
+    // send_string_via_uart("}");
+    // send_newline_via_uart();
   }
 }

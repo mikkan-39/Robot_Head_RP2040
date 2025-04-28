@@ -16,16 +16,12 @@
 
 Gyroscope gyroscope;
 Accelerometer accelerometer;
-// Compass compass;
+Compass compass;
 
-// const float compassCalibrationBias[3] = {567.893,
-// -825.35,
-//                                          1061.436};
+const float compassCalibrationBias[3] = {0.0, 0.0, 0.0};
 
-// const float compassCalibrationMatrix[3][3] = {
-//     {1.909, 0.082, 0.004},
-//     {0.049, 1.942, -0.235},
-//     {-0.003, 0.008, 1.944}};
+const float compassCalibrationMatrix[3][3] = {
+    {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
 
 void InitAllGpio() {
   // Set up our I2C
@@ -40,55 +36,9 @@ void InitAllGpio() {
   gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
   gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
 
-  // GPIO
-  gpio_init(DEV_CS_PIN_RIGHT);
-  gpio_init(DEV_CS_PIN_LEFT);
-  gpio_init(DEV_DC_PIN_RIGHT);
-  gpio_init(DEV_DC_PIN_LEFT);
-  gpio_init(DEV_RST_PIN);
-  gpio_set_dir(DEV_CS_PIN_RIGHT, GPIO_OUT);
-  gpio_set_dir(DEV_CS_PIN_LEFT, GPIO_OUT);
-  gpio_set_dir(DEV_DC_PIN_RIGHT, GPIO_OUT);
-  gpio_set_dir(DEV_DC_PIN_LEFT, GPIO_OUT);
-  gpio_set_dir(DEV_RST_PIN, GPIO_OUT);
-
-  gpio_put(DEV_CS_PIN_RIGHT, 0);
-  gpio_put(DEV_CS_PIN_LEFT, 0);
-  gpio_put(DEV_RST_PIN, 1);
-
-  // PIO
-  uint offsetPioRight =
-      pio_add_program(pio_instance_right, &lcd_program);
-  lcd_program_init(pio_instance_right, pio_state_machine,
-                   offsetPioRight, DEV_MOSI_PIN_RIGHT,
-                   DEV_SCK_PIN_RIGHT, SERIAL_CLK_DIV);
-
-  uint offsetPioLeft =
-      pio_add_program(pio_instance_left, &lcd_program);
-  lcd_program_init(pio_instance_left, pio_state_machine,
-                   offsetPioLeft, DEV_MOSI_PIN_LEFT,
-                   DEV_SCK_PIN_LEFT, SERIAL_CLK_DIV);
-
   gyroscope.begin();
   accelerometer.begin();
-  // compass.begin();
+  compass.begin();
   // compass.setCalibrateMatrix(compassCalibrationMatrix,
   //                            compassCalibrationBias);
-
-  if (!TOFsensor.init()) {
-    printf("Failed to detect and initialize sensor!\n");
-  }
-
-  // lower the return signal rate limit (default is 0.25
-  // MCPS)
-  TOFsensor.setSignalRateLimit(0.1);
-  // increase laser pulse periods (defaults are 14 and 10
-  // PCLKs)
-  TOFsensor.setVcselPulsePeriod(
-      VL53L0X::VcselPeriodPreRange, 18);
-  TOFsensor.setVcselPulsePeriod(
-      VL53L0X::VcselPeriodFinalRange, 14);
-
-  // increase timing budget to 200 ms
-  TOFsensor.setMeasurementTimingBudget(200000);
 }
