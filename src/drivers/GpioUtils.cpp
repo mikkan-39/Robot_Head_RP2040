@@ -9,14 +9,14 @@
 #define I2C_SCL 13
 
 #define BAUD_RATE 115200
-#define UART_TX_PIN 0
-#define UART_RX_PIN 1
+#define UART_TX_PIN 8
+#define UART_RX_PIN 9
 
 #define SERIAL_CLK_DIV 1.f
 
 Gyroscope gyroscope;
 Accelerometer accelerometer;
-// Compass compass;
+Compass compass;
 
 // const float compassCalibrationBias[3] = {567.893,
 // -825.35,
@@ -71,7 +71,7 @@ void InitAllGpio() {
 
   gyroscope.begin();
   accelerometer.begin();
-  // compass.begin();
+  compass.begin();
   // compass.setCalibrateMatrix(compassCalibrationMatrix,
   //                            compassCalibrationBias);
 

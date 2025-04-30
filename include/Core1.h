@@ -5,12 +5,11 @@
 #include "drivers/GpioUtils.h"
 #include "hardware/i2c.h"
 #include "hardware/uart.h"
-#include "multicore/CommandParsers.h"
 #include "multicore/MulticoreUtils.h"
 #include "multicore/UART_Utils.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
-#include <cstdio>
+#include <stdio.h>
 
 void core1_thread();
 

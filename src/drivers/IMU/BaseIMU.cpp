@@ -48,10 +48,10 @@ void BaseIMU::_readBytes(uint8_t regAddress, uint8_t *data,
   int result = i2c_write_blocking(i2c0, _slaveAddress,
                                   &regAddress, 1, true);
   if (result == PICO_ERROR_GENERIC) {
-    // uart_puts(uart0, "write failed\n");
+    // uart_puts(uart1, "write failed\n");
     return;
     // } else {
-    //   uart_puts(uart0, "write success\n");
+    //   uart_puts(uart1, "write success\n");
   }
 
   // Read the specified number of bytes into the provided
@@ -59,9 +59,9 @@ void BaseIMU::_readBytes(uint8_t regAddress, uint8_t *data,
   result = i2c_read_blocking(i2c0, _slaveAddress, data,
                              length, false);
   if (result == PICO_ERROR_GENERIC) {
-    // uart_puts(uart0, "read failed\n");
+    // uart_puts(uart1, "read failed\n");
     return;
     // } else {
-    //   uart_puts(uart0, "read success\n");
+    //   uart_puts(uart1, "read success\n");
   }
 }

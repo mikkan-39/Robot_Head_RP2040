@@ -1,26 +1,5 @@
 #include "multicore/UART_Utils.h"
 
-void send_string_via_uart(const char *string) {
-  uart_puts(uart0, string);
-}
-
-void send_uint16_via_uart(uint16_t value) {
-  char buffer[8];               // Buffer to hold the string
-                                // representation
-  sprintf(buffer, "%d", value); // Convert integer to string
-  uart_puts(uart0, buffer);     // Send the string via UART
-}
-
-void send_float_via_uart(float value) {
-  char buffer[16]; // Buffer to hold the string
-                   // representation of the float
-  sprintf(buffer, "%.8f", value); // Convert float to string
-                                  // with 2 decimal places
-  uart_puts(uart0, buffer); // Send the string via UART
-}
-
-void send_newline_via_uart() { uart_puts(uart0, "\n"); }
-
 char command[128];
 char *receive_command_from_uart() {
 
@@ -28,8 +7,8 @@ char *receive_command_from_uart() {
 
   while (i < 127) { // Reserve 1 byte for the null
                     // terminator
-    if (uart_is_readable(uart0)) {
-      uint8_t byte = uart_getc(uart0);
+    if (uart_is_readable(uart1)) {
+      uint8_t byte = uart_getc(uart1);
 
       if (byte == '\n' || byte == '\r') {
         break;
@@ -43,4 +22,75 @@ char *receive_command_from_uart() {
   command[i] = '\0';
 
   return command;
+}
+
+uint8_t calculate_checksum(uint8_t *data, int length) {
+  char crc = 0x00;
+  char extract;
+  char sum;
+  for (int i = 0; i < length; i++) {
+    extract = *data;
+    for (char tempI = 8; tempI; tempI--) {
+      sum = (crc ^ extract) & 0x01;
+      crc >>= 1;
+      if (sum)
+        crc ^= 0x8C;
+      extract >>= 1;
+    }
+    data++;
+  }
+  return crc;
+}
+
+bool validate_checksum(uint8_t *data, int length) {
+  uint8_t crc = calculate_checksum(data, length - 1);
+  return crc == data[length - 1];
+}
+
+void send_status(uint8_t status) {
+  uint8_t packet[] = {START_BYTE, status, 0x00, 0x00};
+  packet[3] = calculate_checksum(packet, 3);
+  uart_write_blocking(uart1, packet, 4);
+}
+
+void send_tof_via_uart(uint16_t value) {
+  uint8_t packet[] = {
+      START_BYTE, StatusCodes::OK, 0x02, 0x00, 0x00, 0x00};
+  packet[3] = value & 0xFF;        // LSB
+  packet[4] = (value >> 8) & 0xFF; // MSB
+  packet[5] = calculate_checksum(packet, 4);
+  uart_write_blocking(uart1, packet, 6);
+}
+
+//[START_BYTE] [StatusCode=OK] [PayloadLength=28]
+//[Data...28 bytes] [Checksum]
+void send_imu_via_uart(float qx, float qy, float qz,
+                       float qw, float vx, float vy,
+                       float vz) {
+  const uint8_t payload_length = 28;
+  uint8_t packet[3 + payload_length + 1]; // header +
+                                          // payload +
+                                          // checksum
+
+  packet[0] = START_BYTE;
+  packet[1] = StatusCodes::OK;
+  packet[2] = payload_length;
+
+  // Write floats into packet[3]..[30]
+  float values[] = {qx, qy, qz, qw, vx, vy, vz};
+  uint8_t *payload_ptr = &packet[3];
+
+  for (int i = 0; i < 7; ++i) {
+    uint8_t *fbytes = (uint8_t *)&values[i];
+    for (int j = 0; j < 4; ++j) {
+      payload_ptr[i * 4 + j] = fbytes[j]; // copy float as
+                                          // bytes (LE)
+    }
+  }
+
+  // Checksum over header + payload
+  packet[3 + payload_length] =
+      calculate_checksum(packet, 3 + payload_length - 1);
+
+  uart_write_blocking(uart1, packet, sizeof(packet));
 }

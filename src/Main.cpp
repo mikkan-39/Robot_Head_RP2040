@@ -11,7 +11,6 @@
 #include "Core1.h"
 #include "drivers/GpioUtils.h"
 #include "gui/GUI_Paint.h"
-#include "multicore/CommandParsers.h"
 #include "multicore/MulticoreUtils.h"
 // #define PICO_TIME_DEFAULT_ALARM_POOL_DISABLED 1
 
@@ -94,37 +93,24 @@ void updateBitmapColors() {
 }
 
 void init_handler() {
-  printf("DRAW INIT ACK\n");
   currentSystemState = SystemStates::INIT;
 }
 
 void error_handler() {
-  printf("DRAW ERROR ACK\n");
   DrawError();
   currentSystemState = SystemStates::ERROR;
 }
 
 void loading_handler() {
-  printf("DRAW LOADING ACK\n");
   updateBitmapColors();
   DrawLoadingBlocking(
       currentSystemState != SystemStates::INIT,
       current_settings.x, current_settings.y,
       current_settings.radius);
-  printf("LOADING ANIMATION FINISHED\n");
   currentSystemState = SystemStates::NORMAL;
 }
 
-void eyes_handler() {
-  printf("DRAW EYES ACK\n");
-  SystemStates::NORMAL;
-}
-
-void unknown_handler_draw(const char *cmd) {
-  printf("UNKNOWN COMMAND: ");
-  printf(cmd);
-  printf("\n");
-}
+void eyes_handler() { SystemStates::NORMAL; }
 
 int restrainedCoords(int coords) {
   return std::min(std::max(coords, 0), 239);
@@ -132,6 +118,8 @@ int restrainedCoords(int coords) {
 
 int main() {
   stdio_init_all();
+
+  mutex_init(&eyeSettingMutex);
 
   InitAllGpio();
 
@@ -157,8 +145,7 @@ int main() {
 
   BitmapsSend();
 
-  queue_init_with_spinlock(&command_queue, MAX_COMMAND_SIZE,
-                           4, 0);
+  queue_init_with_spinlock(&command_queue, 1, 32, 0);
 
   multicore_launch_core1(core1_thread);
 
@@ -166,12 +153,23 @@ int main() {
 
   while (true) {
     if (!queue_is_empty(&command_queue)) {
-      char *cmd = receive_string_from_core1();
+      char cmd = read_char_from_core1();
       printf("Command received by core0\n");
-      parse_draw_command(cmd, &desired_settings,
-                         init_handler, error_handler,
-                         loading_handler, eyes_handler,
-                         unknown_handler_draw);
+      printf("%02x\n", cmd);
+      switch (cmd) {
+      case MainCommands::DRAW_INIT:
+        init_handler();
+        break;
+      case MainCommands::DRAW_LOADING:
+        loading_handler();
+        break;
+      case MainCommands::DRAW_ERROR:
+        error_handler();
+        break;
+      case MainCommands::DRAW_EYES:
+        eyes_handler();
+        break;
+      }
     }
 
     if (currentSystemState == SystemStates::INIT) {
@@ -180,8 +178,10 @@ int main() {
     }
 
     if (currentSystemState == SystemStates::ERROR) {
+      mutex_enter_blocking(&eyeSettingMutex);
       nextColor =
           getPulsingColor(desired_settings.reserveColor);
+      mutex_exit(&eyeSettingMutex);
       current_settings.reserveColor = nextColor;
       updateBitmapColors();
       BitmapsSend();
@@ -189,8 +189,11 @@ int main() {
 
     if (currentSystemState == SystemStates::NORMAL) {
       BitmapsClear();
+      mutex_enter_blocking(&eyeSettingMutex);
       bumpCurrentToDesired(&current_settings,
                            &desired_settings);
+      mutex_exit(&eyeSettingMutex);
+
       updateBitmapColors();
       DrawEye(current_settings.x, current_settings.y,
               current_settings.radius, PRIMARY_COLOR);

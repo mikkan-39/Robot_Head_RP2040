@@ -6,7 +6,8 @@
 Adafruit_Madgwick filter; // faster than NXP
 Adafruit_Mahony filter2;  // fastest/smalleset
 
-float gx, gy, gz, ax, ay, az, mx, my, mz;
+float gx, gy, gz, ax, ay, az, mx, my, mz, vx, vy, vz, qx,
+    qy, qz, qw;
 float yaw, pitch, roll;
 
 uint16_t TOFDistance = 0;
@@ -14,64 +15,157 @@ uint16_t TOFDistance = 0;
 float sampleRate = 500;
 
 void IMU_handler() {
-  send_string_via_uart("READ_IMU: {");
-  send_string_via_uart("pitch: ");
-  send_float_via_uart(pitch);
-  send_string_via_uart(", roll: ");
-  send_float_via_uart(roll);
-  send_string_via_uart(", yaw: ");
-  send_float_via_uart(yaw);
-  // send_newline_via_uart();
-  send_string_via_uart(", ax: ");
-  send_float_via_uart(ax);
-  send_string_via_uart(", ay: ");
-  send_float_via_uart(ay);
-  send_string_via_uart(", az: ");
-  send_float_via_uart(az);
-  send_string_via_uart(", gx: ");
-  send_float_via_uart(gx);
-  send_string_via_uart(", gy: ");
-  send_float_via_uart(gy);
-  send_string_via_uart(", gz: ");
-  send_float_via_uart(gz);
-  // send_string_via_uart(", mx: ");
-  // send_float_via_uart(mx);
-  // send_string_via_uart(", my: ");
-  // send_float_via_uart(my);
-  // send_string_via_uart(", mz: ");
-  // send_float_via_uart(mz);
-  send_string_via_uart(", sampleRate: ");
-  send_float_via_uart(sampleRate);
-  send_string_via_uart("}");
-  send_newline_via_uart();
-}
-void TOF_handler() {
-  send_string_via_uart("READ_TOF: {distance: ");
-  send_uint16_via_uart(TOFDistance);
-  send_string_via_uart("}");
-  send_newline_via_uart();
-}
-void pingHandler() {
-  send_string_via_uart("PING ACK");
-  send_newline_via_uart();
-}
-void unknown_handler_main(const char *cmd) {
-  send_string_via_uart("UNKNOWN COMMAND: ");
-  send_string_via_uart(cmd);
-  send_newline_via_uart();
-}
-#define draw_handler send_string_to_core0
-
-bool IMU_timer_callback(repeating_timer_t *rt) {
-  accelerometer.readAccelerationGXYZ(ax, ay, az);
-  gyroscope.readRotationDegXYZ(gx, gy, gz);
-  // compass.readCalibrateMagneticGaussXYZ(mx, my, mz);
-
-  filter.updateIMU(-gx, -gy, -gz, -ax, -ay, -az);
 
   yaw = filter.getYaw();
   pitch = filter.getPitch();
   roll = filter.getRoll();
+
+  filter.getGravityVector(&vx, &vy, &vz);
+  filter.getQuaternion(&qw, &qx, &qy, &qz);
+
+  send_imu_via_uart(qx, qy, qz, qw, vx, vy, vz);
+}
+void TOF_handler() { send_tof_via_uart(TOFDistance); }
+
+void handle_draw_eyes_command(const uint8_t *payload,
+                              uint8_t length) {
+  size_t i = 0;
+  while (i + 2 <= length) {
+    uint8_t tag = payload[i++];
+    uint8_t field_len = payload[i++];
+
+    if (i + field_len > length)
+      break;
+
+    switch (tag) {
+    case 0x01: // x
+      if (field_len == 1)
+        desired_settings.x = *(uint8_t *)(payload + i);
+      break;
+    case 0x02: // y
+      if (field_len == 1)
+        desired_settings.y = *(uint8_t *)(payload + i);
+      break;
+    case 0x03: // radius
+      if (field_len == 1)
+        desired_settings.radius = *(uint8_t *)(payload + i);
+      break;
+    case 0x04: // speed
+      if (field_len == 1)
+        desired_settings.speed = *(uint8_t *)(payload + i);
+      break;
+    case 0x05: // backgroundColor
+      if (field_len == 2)
+        desired_settings.backgroundColor =
+            *(uint16_t *)(payload + i);
+      break;
+    case 0x06: // primaryColor
+      if (field_len == 2)
+        desired_settings.primaryColor =
+            *(uint16_t *)(payload + i);
+      break;
+    case 0x07: // secondaryColor
+      if (field_len == 2)
+        desired_settings.secondaryColor =
+            *(uint16_t *)(payload + i);
+      break;
+    case 0x08: // reserveColor
+      if (field_len == 2)
+        desired_settings.reserveColor =
+            *(uint16_t *)(payload + i);
+      break;
+    default:
+      break; // unknown tag — skip or log
+    }
+
+    i += field_len;
+  }
+}
+
+void parse_command(uint8_t command, uint8_t length,
+                   const uint8_t *payload) {
+
+  switch (command) {
+  case MainCommands::PING:
+    send_status(StatusCodes::OK);
+    break;
+  case MainCommands::TOF:
+    TOF_handler();
+    break;
+  case MainCommands::IMU:
+    IMU_handler();
+    break;
+
+  case MainCommands::DRAW_INIT:
+  case MainCommands::DRAW_LOADING:
+  case MainCommands::DRAW_ERROR:
+    send_char_to_core0(command);
+    send_status(StatusCodes::OK);
+    break;
+
+    //[START_BYTE] [0x07 (DRAW_EYES)] [PayloadLength]
+    //[tag (1 byte) length (1 byte) data (length bytes)]
+    //[...repeat...]
+    //[Checksum]
+  case MainCommands::DRAW_EYES:
+    mutex_enter_blocking(&eyeSettingMutex);
+    handle_draw_eyes_command(payload, length);
+    mutex_exit(&eyeSettingMutex);
+
+    send_char_to_core0(MainCommands::DRAW_EYES);
+    send_status(StatusCodes::OK);
+    break;
+
+  default:
+    send_status(StatusCodes::INVALID_COMMAND);
+    break;
+  }
+}
+
+static bool syncing = true;
+void on_serial_rx(uint8_t byte, bool timeout) {
+  static uint8_t buffer[256];
+  static uint8_t pos = 0;
+  static uint8_t expected_len = 0;
+
+  if (syncing) {
+    if (byte == START_BYTE) {
+      pos = 0;
+      buffer[pos++] = byte;
+      syncing = false;
+    }
+    return;
+  }
+
+  buffer[pos++] = byte;
+
+  if (pos == 2) {
+    // Received PACKET_TYPE
+  } else if (pos == 3) {
+    // Received PACKET_LENGTH
+    expected_len = buffer[2];
+  } else if (pos == 3 + expected_len + 1) {
+    // Full packet + checksum received
+    if (validate_checksum(buffer, pos)) {
+      // if (true) {
+      parse_command(buffer[1], buffer[2], buffer + 3);
+    } else {
+      send_status(StatusCodes::WRONG_CHECKSUM);
+    }
+    syncing = true;
+  }
+
+  if (pos >= sizeof(buffer)) {
+    syncing = true; // Avoid overflow
+  }
+}
+
+bool IMU_timer_callback(repeating_timer_t *rt) {
+  accelerometer.readAccelerationGXYZ(ax, ay, az);
+  gyroscope.readRotationDegXYZ(gx, gy, gz);
+  compass.readCalibrateMagneticGaussXYZ(mx, my, mz);
+
+  filter.update(gx, gy, gz, ax, ay, az, mx, my, mz);
 
   return true;
 }
@@ -103,11 +197,14 @@ void core1_thread() {
                                     NULL, &TOFtimer);
 
   while (true) {
-    if (uart_is_readable(uart0)) {
-      char *uart_data = receive_command_from_uart();
-      parse_command(uart_data, pingHandler, IMU_handler,
-                    TOF_handler, draw_handler,
-                    unknown_handler_main);
+    if (uart_is_readable_within_us(uart1, 1000)) {
+      char uart_data = uart_getc(uart1);
+      on_serial_rx(uart_data, false);
+    } else {
+      if (!syncing) {
+        syncing = true;
+        send_status(StatusCodes::INCOMPLETE_REQUEST);
+      }
     }
   }
 }

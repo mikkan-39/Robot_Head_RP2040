@@ -39,7 +39,6 @@ add_executable(Robot_Head_RP2040
 src/Main.cpp
 src/Core1.cpp
 src/multicore/UART_Utils.cpp
-src/multicore/CommandParsers.cpp
 src/multicore/MulticoreUtils.cpp
 src/gui/GUI_Paint.cpp
 src/drivers/LCD_Driver.cpp

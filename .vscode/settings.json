@@ -53,6 +53,10 @@
         "*.tcc": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "cstring": "cpp"
+        "cstring": "cpp",
+        "array": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp"
     }
 }
