@@ -36,22 +36,13 @@ pico_sdk_init()
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(Robot_Head_RP2040
-src/Main.cpp
-src/Core1.cpp
-src/multicore/UART_Utils.cpp
-src/multicore/MulticoreUtils.cpp
-src/gui/GUI_Paint.cpp
-src/drivers/LCD_Driver.cpp
-src/drivers/GpioUtils.cpp
-src/drivers/TOF_Driver.cpp
-src/drivers/IMU/Accelerometer.cpp
-src/drivers/IMU/BaseIMU.cpp
-src/drivers/IMU/Compass.cpp
-src/drivers/IMU/Gyroscope.cpp
-src/drivers/IMU/MadgwickAHRS.cpp 
-src/drivers/AdafruitAHRS/Adafruit_AHRS_Madgwick.cpp
-src/drivers/AdafruitAHRS/Adafruit_AHRS_Mahony.cpp
-# src/drivers/AdafruitAHRS/Adafruit_AHRS_NXPFusion.cpp
+  src/Main.cpp
+  src/Core1.cpp
+  src/multicore/UART_Utils.cpp
+  src/multicore/MulticoreUtils.cpp
+  src/gui/GUI_Paint.cpp
+  src/drivers/LCD_Driver.cpp
+  src/drivers/GpioUtils.cpp
 )
 
 target_include_directories(Robot_Head_RP2040 PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
@@ -75,13 +66,13 @@ target_include_directories(Robot_Head_RP2040 PRIVATE
 )
 
 # Add any user requested libraries
-target_link_libraries(Robot_Head_RP2040 
-        hardware_spi
-        hardware_i2c
-        hardware_pio
-        pico_rand
-        pico_multicore
-        )
+target_link_libraries(Robot_Head_RP2040
+  hardware_spi
+  hardware_pio
+  hardware_uart
+  pico_rand
+  pico_multicore
+)
 
 pico_add_extra_outputs(Robot_Head_RP2040)
 

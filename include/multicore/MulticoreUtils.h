@@ -13,13 +13,11 @@ void send_char_to_core0(char c);
 char read_char_from_core1();
 
 enum MainCommands : uint8_t {
-  PING = 0x01,
-  TOF = 0x02,
-  IMU = 0x03,
-  DRAW_INIT = 0x04,
-  DRAW_LOADING = 0x05,
-  DRAW_ERROR = 0x06,
-  DRAW_EYES = 0x07,
+  PING         = 0x01,
+  DRAW_INIT    = 0x02,
+  DRAW_LOADING = 0x03,
+  DRAW_ERROR   = 0x04,
+  DRAW_EYES    = 0x05,
 };
 
 enum StatusCodes : uint8_t {

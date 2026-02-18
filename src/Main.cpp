@@ -1,4 +1,3 @@
-#include "hardware/i2c.h"
 #include "hardware/uart.h"
 #include "pico/stdlib.h"
 #include "pico/util/queue.h"
