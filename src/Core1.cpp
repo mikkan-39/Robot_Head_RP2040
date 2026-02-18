@@ -15,16 +15,12 @@ uint16_t TOFDistance = 0;
 float sampleRate = 500;
 
 void IMU_handler() {
+  float imudata[] = {qx, qy, qz, qw, vx, vy, vz,
+                     ax, ay, az, gx, gy, gz};
 
-  yaw = filter.getYaw();
-  pitch = filter.getPitch();
-  roll = filter.getRoll();
-
-  filter.getGravityVector(&vx, &vy, &vz);
-  filter.getQuaternion(&qw, &qx, &qy, &qz);
-
-  send_imu_via_uart(qx, qy, qz, qw, vx, vy, vz);
+  send_imu_via_uart(imudata, 13);
 }
+
 void TOF_handler() { send_tof_via_uart(TOFDistance); }
 
 void handle_draw_eyes_command(const uint8_t *payload,
@@ -108,12 +104,11 @@ void parse_command(uint8_t command, uint8_t length,
     //[...repeat...]
     //[Checksum]
   case MainCommands::DRAW_EYES:
+    send_status(StatusCodes::OK);
     mutex_enter_blocking(&eyeSettingMutex);
     handle_draw_eyes_command(payload, length);
-    mutex_exit(&eyeSettingMutex);
-
     send_char_to_core0(MainCommands::DRAW_EYES);
-    send_status(StatusCodes::OK);
+    mutex_exit(&eyeSettingMutex);
     break;
 
   default:
@@ -166,6 +161,9 @@ bool IMU_timer_callback(repeating_timer_t *rt) {
   compass.readCalibrateMagneticGaussXYZ(mx, my, mz);
 
   filter.update(gx, gy, gz, ax, ay, az, mx, my, mz);
+
+  filter.getGravityVector(&vx, &vy, &vz);
+  filter.getQuaternion(&qw, &qx, &qy, &qz);
 
   return true;
 }

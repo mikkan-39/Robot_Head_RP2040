@@ -357,7 +357,7 @@ void DrawLoadingBlocking(bool fullReload, int currentX,
       BitmapsSend();
     }
     for (int r = 0; r < currentR; r += 5) {
-      DrawEye(currentX, currentY, r, BACKGROUND_COLOR);
+      DrawEye(currentX, currentY, r, PRIMARY_COLOR);
       BitmapsSend();
     }
   }

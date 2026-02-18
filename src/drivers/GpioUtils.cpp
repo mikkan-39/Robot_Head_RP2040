@@ -8,7 +8,7 @@
 #define I2C_SDA 12
 #define I2C_SCL 13
 
-#define BAUD_RATE 115200
+#define BAUD_RATE 1000000
 #define UART_TX_PIN 8
 #define UART_RX_PIN 9
 

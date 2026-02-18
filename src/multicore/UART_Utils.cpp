@@ -58,16 +58,14 @@ void send_tof_via_uart(uint16_t value) {
       START_BYTE, StatusCodes::OK, 0x02, 0x00, 0x00, 0x00};
   packet[3] = value & 0xFF;        // LSB
   packet[4] = (value >> 8) & 0xFF; // MSB
-  packet[5] = calculate_checksum(packet, 4);
+  packet[5] = calculate_checksum(packet, 5);
   uart_write_blocking(uart1, packet, 6);
 }
 
-//[START_BYTE] [StatusCode=OK] [PayloadLength=28]
-//[Data...28 bytes] [Checksum]
-void send_imu_via_uart(float qx, float qy, float qz,
-                       float qw, float vx, float vy,
-                       float vz) {
-  const uint8_t payload_length = 28;
+//[START_BYTE] [StatusCode=OK] [PayloadLength=num_floats*4]
+//[Data...num_floats*4 bytes] [Checksum]
+void send_imu_via_uart(float *data, int length) {
+  const uint8_t payload_length = length * 4;
   uint8_t packet[3 + payload_length + 1]; // header +
                                           // payload +
                                           // checksum
@@ -76,12 +74,11 @@ void send_imu_via_uart(float qx, float qy, float qz,
   packet[1] = StatusCodes::OK;
   packet[2] = payload_length;
 
-  // Write floats into packet[3]..[30]
-  float values[] = {qx, qy, qz, qw, vx, vy, vz};
+  // Write floats into packet
   uint8_t *payload_ptr = &packet[3];
 
-  for (int i = 0; i < 7; ++i) {
-    uint8_t *fbytes = (uint8_t *)&values[i];
+  for (int i = 0; i < length; ++i) {
+    uint8_t *fbytes = (uint8_t *)&data[i];
     for (int j = 0; j < 4; ++j) {
       payload_ptr[i * 4 + j] = fbytes[j]; // copy float as
                                           // bytes (LE)
@@ -90,7 +87,7 @@ void send_imu_via_uart(float qx, float qy, float qz,
 
   // Checksum over header + payload
   packet[3 + payload_length] =
-      calculate_checksum(packet, 3 + payload_length - 1);
+      calculate_checksum(packet, 3 + payload_length);
 
   uart_write_blocking(uart1, packet, sizeof(packet));
 }

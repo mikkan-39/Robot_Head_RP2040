@@ -9,9 +9,7 @@
 #define START_BYTE 0xAA
 
 void send_tof_via_uart(uint16_t value);
-void send_imu_via_uart(float qx, float qy, float qz,
-                       float qw, float vx, float vy,
-                       float vz);
+void send_imu_via_uart(float *data, int length);
 
 uint8_t calculate_checksum(uint8_t *data, int length);
 bool validate_checksum(uint8_t *data, int length);
