@@ -4,11 +4,11 @@ Renders the packed DISPLAY_BITMAP struct via pygame + numpy.
 
 Core1Thread listens on /tmp/robot_eyes.sock for UART-protocol packets
 and puts commands on a queue — identical architecture to the real hardware.
-Send commands with:  python send_cmd.py eyes --x 120 --y 80 --r 70
+Send commands with:  python send_cmd.py eyes --x 120 --y 80 --r 50
 
 Local controls (keyboard override when no external commands arrive):
   Arrow keys  — move eye center
-  [ / ]       — decrease / increase radius
+  [ / ]       — decrease / increase pupil radius (aperture)
   ESC / Q     — quit
 """
 
@@ -19,10 +19,12 @@ import numpy as np
 import pygame
 
 from anim     import EyeAnimator
-from bitmap   import DisplayBitmap, WIDTH, HEIGHT, CYAN, BLACK, BLUE, RED
+from bitmap   import DisplayBitmap, WIDTH, HEIGHT
 from commands import Cmd, EyeSettings
 from core1    import Core1Thread
-from draw     import clear_both, draw_eyes, PRIMARY
+from draw     import clear_both
+from eye      import (draw_camera_eyes,
+                      OUTER_RADIUS, PUPIL_MIN_R, OUTER_RING_W, APERTURE_RING_W, DEFAULT_PUPIL_R)
 
 # ── config ───────────────────────────────────────────────────────────────────
 SCALE      = 2
@@ -33,6 +35,8 @@ PANEL_W = WIDTH  * SCALE
 PANEL_H = HEIGHT * SCALE
 WIN_W   = PANEL_W * 2 + GAP
 WIN_H   = PANEL_H
+
+PUPIL_MAX_R = OUTER_RADIUS - OUTER_RING_W - APERTURE_RING_W - 2
 
 
 # ── bitmap → pygame surface (numpy fast path) ────────────────────────────────
@@ -61,14 +65,21 @@ def main():
     clock = pygame.time.Clock()
     font  = pygame.font.SysFont("monospace", 12)
 
-    right = DisplayBitmap(bg_color=BLACK, primary_color=CYAN,
-                          secondary_color=BLUE, reserved_color=RED)
-    left  = DisplayBitmap(bg_color=BLACK, primary_color=CYAN,
-                          secondary_color=BLUE, reserved_color=RED)
+    # Single source of truth: EyeSettings defaults define the initial appearance.
+    # To change startup colors, edit the EyeSettings dataclass in commands.py only.
+    state = EyeSettings(radius=DEFAULT_PUPIL_R)
 
-    # target state (latest command) and animator (current rendered position)
-    state = EyeSettings()
-    anim  = EyeAnimator(x=state.x, y=state.y, r=state.radius)
+    def _make_bitmap(s: EyeSettings) -> DisplayBitmap:
+        return DisplayBitmap(
+            bg_color        = s.background_color,
+            primary_color   = s.primary_color,
+            secondary_color = s.secondary_color,
+            reserved_color  = s.reserve_color,
+        )
+
+    right = _make_bitmap(state)
+    left  = _make_bitmap(state)
+    anim  = EyeAnimator(x=float(state.x), y=float(state.y), r=float(state.radius))
 
     running = True
     while running:
@@ -90,27 +101,32 @@ def main():
             elif cmd in (Cmd.DRAW_INIT, Cmd.DRAW_LOADING, Cmd.DRAW_ERROR):
                 clear_both(right, left)
 
-        # ── keyboard (moves target, animator will ease toward it) ────────────
+        # ── keyboard ─────────────────────────────────────────────────────────
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_ESCAPE, pygame.K_q):
                     running = False
-                elif event.key == pygame.K_LEFT:         state.x -= 4
-                elif event.key == pygame.K_RIGHT:        state.x += 4
-                elif event.key == pygame.K_UP:           state.y -= 4
-                elif event.key == pygame.K_DOWN:         state.y += 4
-                elif event.key == pygame.K_LEFTBRACKET:  state.radius = max(1,   state.radius - 4)
-                elif event.key == pygame.K_RIGHTBRACKET: state.radius = min(110, state.radius + 4)
+                elif event.key == pygame.K_LEFT:
+                    state.x -= 4
+                elif event.key == pygame.K_RIGHT:
+                    state.x += 4
+                elif event.key == pygame.K_UP:
+                    state.y -= 4
+                elif event.key == pygame.K_DOWN:
+                    state.y += 4
+                elif event.key == pygame.K_LEFTBRACKET:
+                    state.radius = max(PUPIL_MIN_R, state.radius - 4)
+                elif event.key == pygame.K_RIGHTBRACKET:
+                    state.radius = min(PUPIL_MAX_R, state.radius + 4)
 
-        # ── advance animator one frame toward target ──────────────────────────
+        # ── advance animator ─────────────────────────────────────────────────
         anim.step(state.x, state.y, state.radius, state.speed)
         cx, cy, cr = anim.as_int()
 
         # ── draw ─────────────────────────────────────────────────────────────
-        clear_both(right, left)
-        draw_eyes(right, left, cx, cy, cr, PRIMARY)
+        draw_camera_eyes(right, left, cx, cy, cr)
 
         # ── render ───────────────────────────────────────────────────────────
         surf_r = bitmap_to_surface(right)
@@ -126,10 +142,9 @@ def main():
         screen.blit(label_l, (PANEL_W + GAP + 4,  4))
 
         fps  = clock.get_fps()
+        pct  = int(100 * (1.0 - (cr - PUPIL_MIN_R) / max(PUPIL_MAX_R - PUPIL_MIN_R, 1)))
         info = font.render(
-            f"cur ({cx},{cy}) r={cr}  "
-            f"target ({state.x},{state.y}) r={state.radius} spd={state.speed}  "
-            f"{fps:.0f} fps",
+            f"pos ({cx},{cy})  zoom {pct}%  r={cr}  spd={state.speed}  {fps:.0f} fps",
             True, (60, 60, 60),
         )
         screen.blit(info, (4, WIN_H - 18))

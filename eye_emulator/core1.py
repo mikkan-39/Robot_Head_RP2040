@@ -4,6 +4,7 @@
 # (Cmd, EyeSettings|None) tuples on a queue.Queue for the main thread.
 # Sends status response packets back through the socket (mirrors send_status()).
 
+import copy
 import os
 import queue
 import socket
@@ -15,8 +16,16 @@ from commands import (
 )
 
 
-def _dispatch(buf: bytearray, cmd_queue: queue.Queue) -> bytes:
-    """Mirrors parse_command() in Core1.cpp."""
+def _dispatch(buf: bytearray, cmd_queue: queue.Queue,
+              current: EyeSettings, lock: threading.Lock) -> bytes:
+    """
+    Mirrors parse_command() in Core1.cpp.
+
+    current is the persistent EyeSettings — exactly like desired_settings in C.
+    Only the TLV fields present in the packet are updated; everything else
+    keeps its previous value.  A copy goes on the queue so the draw thread
+    always sees a consistent snapshot.
+    """
     command = buf[1]
     length  = buf[2]
     payload = bytes(buf[3:3 + length])
@@ -29,15 +38,16 @@ def _dispatch(buf: bytearray, cmd_queue: queue.Queue) -> bytes:
         return build_packet(Status.OK)
 
     if command == Cmd.DRAW_EYES:
-        s = EyeSettings()
-        decode_draw_eyes(payload, s)
-        cmd_queue.put((command, s))
+        with lock:
+            decode_draw_eyes(payload, current)          # update only sent fields
+            cmd_queue.put((command, copy.copy(current))) # snapshot for Core0
         return build_packet(Status.OK)
 
     return build_packet(Status.INVALID_COMMAND)
 
 
-def _handle_connection(conn: socket.socket, cmd_queue: queue.Queue):
+def _handle_connection(conn: socket.socket, cmd_queue: queue.Queue,
+                       current: EyeSettings, lock: threading.Lock):
     """Feeds received bytes through on_serial_rx() state machine."""
     buf          = bytearray()
     syncing      = True
@@ -65,7 +75,7 @@ def _handle_connection(conn: socket.socket, cmd_queue: queue.Queue):
                 expected_len = buf[2]
             elif len(buf) == 3 + expected_len + 1:
                 if validate_checksum(bytes(buf)):
-                    response = _dispatch(buf, cmd_queue)
+                    response = _dispatch(buf, cmd_queue, current, lock)
                 else:
                     response = build_packet(Status.WRONG_CHECKSUM)
                 try:
@@ -84,6 +94,10 @@ class Core1Thread(threading.Thread):
     def __init__(self, cmd_queue: queue.Queue):
         super().__init__(daemon=True, name='Core1')
         self.cmd_queue = cmd_queue
+        # Persistent state — mirrors desired_settings global in C.
+        # Initialised from EyeSettings defaults (the ONE place colors are defined).
+        self._current  = EyeSettings()
+        self._lock     = threading.Lock()
 
     def run(self):
         if os.path.exists(SOCKET_PATH):
@@ -98,11 +112,9 @@ class Core1Thread(threading.Thread):
                     conn, _ = srv.accept()
                 except OSError:
                     break
-                # each connection gets its own thread so multiple senders
-                # don't block each other (mirrors real UART being always-on)
                 t = threading.Thread(
                     target=_handle_connection,
-                    args=(conn, self.cmd_queue),
+                    args=(conn, self.cmd_queue, self._current, self._lock),
                     daemon=True,
                 )
                 t.start()

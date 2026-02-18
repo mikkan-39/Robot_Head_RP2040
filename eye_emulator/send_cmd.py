@@ -15,7 +15,7 @@ import sys
 
 from commands import (
     SOCKET_PATH, Cmd, Status,
-    EyeSettings, build_packet, encode_draw_eyes,
+    build_packet, encode_draw_eyes_partial,
 )
 
 
@@ -49,15 +49,15 @@ def main():
     sub.add_parser('loading', help='Trigger DRAW_LOADING')
     sub.add_parser('error',   help='Trigger DRAW_ERROR')
 
-    eyes = sub.add_parser('eyes', help='Send DRAW_EYES')
-    eyes.add_argument('--x',        type=int,                    default=120)
-    eyes.add_argument('--y',        type=int,                    default=120)
-    eyes.add_argument('--r',        type=int,                    default=60)
-    eyes.add_argument('--speed',    type=int,                    default=5)
-    eyes.add_argument('--primary',  type=lambda v: int(v, 0),   default=0x7FFF)  # CYAN
-    eyes.add_argument('--secondary',type=lambda v: int(v, 0),   default=0x07E0)  # GREEN
-    eyes.add_argument('--bg',       type=lambda v: int(v, 0),   default=0x0000)  # BLACK
-    eyes.add_argument('--reserve',  type=lambda v: int(v, 0),   default=0xF800)  # RED
+    eyes = sub.add_parser('eyes', help='Send DRAW_EYES (omitted args keep their last value)')
+    eyes.add_argument('--x',        type=int,                  default=None)
+    eyes.add_argument('--y',        type=int,                  default=None)
+    eyes.add_argument('--r',        type=int,                  default=None)
+    eyes.add_argument('--speed',    type=int,                  default=None)
+    eyes.add_argument('--primary',  type=lambda v: int(v, 0), default=None)
+    eyes.add_argument('--secondary',type=lambda v: int(v, 0), default=None)
+    eyes.add_argument('--bg',       type=lambda v: int(v, 0), default=None)
+    eyes.add_argument('--reserve',  type=lambda v: int(v, 0), default=None)
 
     args = parser.parse_args()
 
@@ -69,13 +69,17 @@ def main():
         pkt = build_packet(Cmd.DRAW_LOADING)
     elif args.cmd == 'error':
         pkt = build_packet(Cmd.DRAW_ERROR)
-    else:  # eyes
-        s = EyeSettings(
-            x=args.x, y=args.y, radius=args.r, speed=args.speed,
-            primary_color=args.primary, secondary_color=args.secondary,
-            background_color=args.bg, reserve_color=args.reserve,
-        )
-        pkt = encode_draw_eyes(s)
+    else:  # eyes — only send fields the user explicitly provided
+        fields = {}
+        if args.x         is not None: fields['x']                = args.x
+        if args.y         is not None: fields['y']                = args.y
+        if args.r         is not None: fields['radius']           = args.r
+        if args.speed     is not None: fields['speed']            = args.speed
+        if args.primary   is not None: fields['primary_color']    = args.primary
+        if args.secondary is not None: fields['secondary_color']  = args.secondary
+        if args.bg        is not None: fields['background_color'] = args.bg
+        if args.reserve   is not None: fields['reserve_color']    = args.reserve
+        pkt = encode_draw_eyes_partial(**fields)
 
     print(transact(pkt))
 

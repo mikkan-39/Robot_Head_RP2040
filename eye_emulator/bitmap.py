@@ -27,6 +27,7 @@ RED      = 0xF800
 GREEN    = 0x07E0
 MAGENTA  = 0xF81F
 CYAN     = 0x7FFF
+DARKCYAN = 0x05F7  # RGB565 (0, 47, 23) — ~75% of CYAN brightness
 YELLOW   = 0xFFE0
 BROWN    = 0xBC40
 GRAY     = 0x8430
@@ -56,7 +57,7 @@ def dim_rgb565(color: int, brightness: int) -> int:
 class DisplayBitmap:
     bg_color:        int = BLACK
     primary_color:   int = CYAN
-    secondary_color: int = GREEN
+    secondary_color: int = DARKCYAN
     reserved_color:  int = RED
 
     # packed 2-bit pixel data, identical layout to C BitmapData[]
@@ -83,6 +84,20 @@ class DisplayBitmap:
         bit_offset  = (pixel_index %  PIXELS_PER_BYTE) * BITS_PER_COLOR
         self.data[byte_index] &= ~(PIXEL_MASK << bit_offset) & 0xFF
         self.data[byte_index] |=  (color_index & PIXEL_MASK) << bit_offset
+
+    def set_from_array(self, array) -> None:
+        """
+        Replace entire bitmap from a HEIGHT×WIDTH uint8 color-index (0-3) array.
+        This is the fast path used by the numpy-accelerated eye renderer.
+        In C the equivalent is the interpolator texture-sample write loop.
+        """
+        import numpy as np
+        flat = array.ravel().astype(np.uint8) & 0x03
+        packed = (flat[0::4]        |
+                 (flat[1::4] << 2)  |
+                 (flat[2::4] << 4)  |
+                 (flat[3::4] << 6)).astype(np.uint8)
+        self.data[:] = packed.tobytes()
 
     def get_pixel_index(self, x: int, y: int) -> int:
         if x < 0 or x >= WIDTH or y < 0 or y >= HEIGHT:

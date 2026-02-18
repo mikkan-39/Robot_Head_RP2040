@@ -5,7 +5,7 @@ import struct
 from dataclasses import dataclass
 from enum import IntEnum
 
-from bitmap import BLACK, CYAN, GREEN, RED
+from bitmap import BLACK, CYAN, DARKCYAN, RED
 
 START_BYTE  = 0xAA
 SOCKET_PATH = '/tmp/robot_eyes.sock'
@@ -36,7 +36,7 @@ class EyeSettings:
     speed:            int = 5
     background_color: int = BLACK
     primary_color:    int = CYAN
-    secondary_color:  int = GREEN
+    secondary_color:  int = DARKCYAN
     reserve_color:    int = RED
 
 
@@ -66,6 +66,7 @@ def build_packet(command: int, payload: bytes = b'') -> bytes:
 
 # ── DRAW_EYES TLV encoder ─────────────────────────────────────────────────────
 def encode_draw_eyes(s: EyeSettings) -> bytes:
+    """Encode all fields. Use when you explicitly want to set everything."""
     tlv  = bytes([0x01, 1, s.x      & 0xFF])
     tlv += bytes([0x02, 1, s.y      & 0xFF])
     tlv += bytes([0x03, 1, s.radius & 0xFF])
@@ -74,6 +75,27 @@ def encode_draw_eyes(s: EyeSettings) -> bytes:
     tlv += bytes([0x06, 2]) + struct.pack('<H', s.primary_color)
     tlv += bytes([0x07, 2]) + struct.pack('<H', s.secondary_color)
     tlv += bytes([0x08, 2]) + struct.pack('<H', s.reserve_color)
+    return build_packet(Cmd.DRAW_EYES, tlv)
+
+
+def encode_draw_eyes_partial(**kwargs) -> bytes:
+    """
+    Encode only the provided fields.  Omitted fields are not sent — the
+    receiver keeps its last value.  This is the correct call when the
+    sender doesn't want to override every parameter.
+
+    Valid keys: x, y, radius, speed, background_color, primary_color,
+                secondary_color, reserve_color
+    """
+    tlv = b''
+    if 'x'                in kwargs: tlv += bytes([0x01, 1, kwargs['x']      & 0xFF])
+    if 'y'                in kwargs: tlv += bytes([0x02, 1, kwargs['y']      & 0xFF])
+    if 'radius'           in kwargs: tlv += bytes([0x03, 1, kwargs['radius'] & 0xFF])
+    if 'speed'            in kwargs: tlv += bytes([0x04, 1, kwargs['speed']  & 0xFF])
+    if 'background_color' in kwargs: tlv += bytes([0x05, 2]) + struct.pack('<H', kwargs['background_color'])
+    if 'primary_color'    in kwargs: tlv += bytes([0x06, 2]) + struct.pack('<H', kwargs['primary_color'])
+    if 'secondary_color'  in kwargs: tlv += bytes([0x07, 2]) + struct.pack('<H', kwargs['secondary_color'])
+    if 'reserve_color'    in kwargs: tlv += bytes([0x08, 2]) + struct.pack('<H', kwargs['reserve_color'])
     return build_packet(Cmd.DRAW_EYES, tlv)
 
 
