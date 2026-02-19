@@ -41,13 +41,12 @@ PUPIL_MAX_R = OUTER_RADIUS - OUTER_RING_W - APERTURE_RING_W - 2
 
 # ── bitmap → pygame surface (numpy fast path) ────────────────────────────────
 def bitmap_to_surface(bm: DisplayBitmap) -> pygame.Surface:
+    # 4-bit packed: 2 pixels per byte, low nibble = pixel 0, high nibble = pixel 1
     raw  = np.frombuffer(bm.data, dtype=np.uint8)
     idxs = np.empty(HEIGHT * WIDTH, dtype=np.uint8)
-    idxs[0::4] =  raw        & 0x03
-    idxs[1::4] = (raw >> 2)  & 0x03
-    idxs[2::4] = (raw >> 4)  & 0x03
-    idxs[3::4] = (raw >> 6)  & 0x03
-    lut = np.array(bm.color_lut(), dtype=np.uint8)
+    idxs[0::2] =  raw        & 0x0F   # low nibble
+    idxs[1::2] = (raw >> 4)  & 0x0F   # high nibble
+    lut = np.array(bm.color_lut(), dtype=np.uint8)   # (16, 3) RGB888
     rgb = lut[idxs].reshape(HEIGHT, WIDTH, 3)
     if SCALE > 1:
         rgb = rgb.repeat(SCALE, axis=0).repeat(SCALE, axis=1)

@@ -1,25 +1,60 @@
-# Exact Python mirror of DISPLAY_BITMAP from GUI_Paint.h.
-# Packing: 2 bits/pixel, 4 pixels/byte, LSB = pixel 0.
-# Color index layout: 00=BG  01=SECONDARY  10=RESERVED  11=PRIMARY
+# DISPLAY_BITMAP — 4-bit packed pixel buffer with 16-entry palette.
+#
+# Packing: 2 pixels per byte, low nibble = pixel 0, high nibble = pixel 1.
+# pixel_index = y * WIDTH + x
+# byte_index  = pixel_index // 2
+# nibble      = pixel_index % 2   (0 = low, 1 = high)
+#
+# Palette layout (16 entries):
+#   0  BG             3 base colors
+#   1  SECONDARY
+#   2  PRIMARY
+#   3  RESERVED
+#   4-6  BG → SECONDARY   (25 / 50 / 75 %)   ─┐
+#   7-9  SECONDARY → PRIMARY                   ├─ AA gradients
+#  10-12 PRIMARY → SECONDARY                   │
+#  13-15 BG → PRIMARY  (spare)                ─┘
 
 from dataclasses import dataclass, field
 
-# ── display geometry ────────────────────────────────────────────────────────
+# ── display geometry ──────────────────────────────────────────────────────────
 WIDTH  = 240
 HEIGHT = 240
 
-BITS_PER_COLOR  = 2
-PIXEL_MASK      = 0b11
-PIXELS_PER_BYTE = 4
-BITMAP_BYTES    = (HEIGHT * WIDTH) // PIXELS_PER_BYTE  # 14400
+BITS_PER_COLOR  = 4
+PIXELS_PER_BYTE = 2
+PIXEL_MASK      = 0x0F
+BITMAP_BYTES    = (HEIGHT * WIDTH) // PIXELS_PER_BYTE   # 28 800
 
-# ── 2-bit color indices ──────────────────────────────────────────────────────
-BG        = 0b00
-SECONDARY = 0b01
-RESERVED  = 0b10
-PRIMARY   = 0b11
+# ── palette index constants ───────────────────────────────────────────────────
+PI_BG         = 0
+PI_SECONDARY  = 1
+PI_PRIMARY    = 2
+PI_RESERVED   = 3
 
-# ── RGB565 palette constants (same names as GUI_Paint.h) ────────────────────
+PI_BG_SEC_1   = 4    # 25 % secondary
+PI_BG_SEC_2   = 5    # 50 %
+PI_BG_SEC_3   = 6    # 75 %
+
+PI_SEC_PRI_1  = 7    # 25 % primary  (mostly secondary)
+PI_SEC_PRI_2  = 8    # 50 %
+PI_SEC_PRI_3  = 9    # 75 % primary
+
+PI_PRI_SEC_1  = 10   # 25 % secondary (mostly primary)
+PI_PRI_SEC_2  = 11   # 50 %
+PI_PRI_SEC_3  = 12   # 75 % secondary
+
+PI_BG_PRI_1   = 13   # spare — BG → PRIMARY gradient
+PI_BG_PRI_2   = 14
+PI_BG_PRI_3   = 15
+
+# backward-compatible aliases (used by draw.py and legacy callers)
+BG        = PI_BG
+PRIMARY   = PI_PRIMARY
+SECONDARY = PI_SECONDARY
+RESERVED  = PI_RESERVED
+
+# ── RGB565 colour constants ───────────────────────────────────────────────────
 BLACK    = 0x0000
 WHITE    = 0xFFFF
 BLUE     = 0x001F
@@ -27,12 +62,13 @@ RED      = 0xF800
 GREEN    = 0x07E0
 MAGENTA  = 0xF81F
 CYAN     = 0x7FFF
-DARKCYAN = 0x05F7  # RGB565 (0, 47, 23) — ~75% of CYAN brightness
 YELLOW   = 0xFFE0
 BROWN    = 0xBC40
 GRAY     = 0x8430
+DARKCYAN = 0x05F7  # RGB565 (0, 47, 23) — ~75 % of CYAN brightness
 
 
+# ── colour helpers ────────────────────────────────────────────────────────────
 def rgb565_to_rgb888(c: int) -> tuple[int, int, int]:
     r = ((c >> 11) & 0x1F) << 3
     g = ((c >>  5) & 0x3F) << 2
@@ -44,8 +80,32 @@ def rgb888_to_rgb565(r: int, g: int, b: int) -> int:
     return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
 
 
+def _lerp_rgb565(a: int, b: int, t: float) -> int:
+    """Blend two RGB565 colours in component space.  t=0 → a, t=1 → b."""
+    r = round(((a >> 11) & 0x1F) * (1 - t) + ((b >> 11) & 0x1F) * t)
+    g = round(((a >>  5) & 0x3F) * (1 - t) + ((b >>  5) & 0x3F) * t)
+    bl= round( (a        & 0x1F) * (1 - t) + ( b        & 0x1F) * t)
+    return (r << 11) | (g << 5) | bl
+
+
+def build_palette(bg: int, primary: int,
+                  secondary: int, reserved: int) -> list[int]:
+    """Build the full 16-entry RGB565 palette from the 4 base colours."""
+    p = [0] * 16
+    p[PI_BG]       = bg
+    p[PI_SECONDARY]= secondary
+    p[PI_PRIMARY]  = primary
+    p[PI_RESERVED] = reserved
+    for i, t in enumerate((0.25, 0.50, 0.75)):
+        p[PI_BG_SEC_1  + i] = _lerp_rgb565(bg,        secondary, t)
+        p[PI_SEC_PRI_1 + i] = _lerp_rgb565(secondary, primary,   t)
+        p[PI_PRI_SEC_1 + i] = _lerp_rgb565(primary,   secondary, t)
+        p[PI_BG_PRI_1  + i] = _lerp_rgb565(bg,        primary,   t)
+    return p
+
+
 def dim_rgb565(color: int, brightness: int) -> int:
-    """brightness 0-31, same formula as getDimmedColor in GUI_Paint.cpp"""
+    """brightness 0–31."""
     brightness = min(brightness, 31)
     r = ((color >> 11) & 0x1F) * brightness // 31
     g = ((color >>  5) & 0x3F) * brightness // 31
@@ -53,6 +113,7 @@ def dim_rgb565(color: int, brightness: int) -> int:
     return (r << 11) | (g << 5) | b
 
 
+# ── DisplayBitmap ─────────────────────────────────────────────────────────────
 @dataclass
 class DisplayBitmap:
     bg_color:        int = BLACK
@@ -60,17 +121,13 @@ class DisplayBitmap:
     secondary_color: int = DARKCYAN
     reserved_color:  int = RED
 
-    # packed 2-bit pixel data, identical layout to C BitmapData[]
     data: bytearray = field(default_factory=lambda: bytearray(BITMAP_BYTES))
 
-    # ── color lookup (index → RGB888), rebuilt on color change ──────────────
     def color_lut(self) -> list[tuple[int, int, int]]:
-        return [
-            rgb565_to_rgb888(self.bg_color),        # 00
-            rgb565_to_rgb888(self.secondary_color),  # 01
-            rgb565_to_rgb888(self.reserved_color),   # 10
-            rgb565_to_rgb888(self.primary_color),    # 11
-        ]
+        """16-entry RGB888 lookup table, derived from the 4 base colours."""
+        pal = build_palette(self.bg_color, self.primary_color,
+                            self.secondary_color, self.reserved_color)
+        return [rgb565_to_rgb888(c) for c in pal]
 
     def clear(self):
         for i in range(BITMAP_BYTES):
@@ -80,29 +137,30 @@ class DisplayBitmap:
         if x < 0 or x >= WIDTH or y < 0 or y >= HEIGHT:
             return
         pixel_index = y * WIDTH + x
-        byte_index  = pixel_index // PIXELS_PER_BYTE
-        bit_offset  = (pixel_index %  PIXELS_PER_BYTE) * BITS_PER_COLOR
-        self.data[byte_index] &= ~(PIXEL_MASK << bit_offset) & 0xFF
-        self.data[byte_index] |=  (color_index & PIXEL_MASK) << bit_offset
-
-    def set_from_array(self, array) -> None:
-        """
-        Replace entire bitmap from a HEIGHT×WIDTH uint8 color-index (0-3) array.
-        This is the fast path used by the numpy-accelerated eye renderer.
-        In C the equivalent is the interpolator texture-sample write loop.
-        """
-        import numpy as np
-        flat = array.ravel().astype(np.uint8) & 0x03
-        packed = (flat[0::4]        |
-                 (flat[1::4] << 2)  |
-                 (flat[2::4] << 4)  |
-                 (flat[3::4] << 6)).astype(np.uint8)
-        self.data[:] = packed.tobytes()
+        byte_index  = pixel_index >> 1          # // 2
+        nibble      = pixel_index & 1           # 0 = low, 1 = high
+        v           = color_index & PIXEL_MASK
+        if nibble == 0:
+            self.data[byte_index] = (self.data[byte_index] & 0xF0) | v
+        else:
+            self.data[byte_index] = (self.data[byte_index] & 0x0F) | (v << 4)
 
     def get_pixel_index(self, x: int, y: int) -> int:
         if x < 0 or x >= WIDTH or y < 0 or y >= HEIGHT:
-            return BG
+            return PI_BG
         pixel_index = y * WIDTH + x
-        byte_index  = pixel_index // PIXELS_PER_BYTE
-        bit_offset  = (pixel_index %  PIXELS_PER_BYTE) * BITS_PER_COLOR
-        return (self.data[byte_index] >> bit_offset) & PIXEL_MASK
+        byte_index  = pixel_index >> 1
+        nibble      = pixel_index & 1
+        b = self.data[byte_index]
+        return b & 0x0F if nibble == 0 else (b >> 4) & 0x0F
+
+    def set_from_array(self, array) -> None:
+        """
+        Replace entire bitmap from a HEIGHT×WIDTH uint8 colour-index (0-15) array.
+        Fast path used by the numpy eye renderer; equivalent to the per-pixel
+        PIO send loop write in C.
+        """
+        import numpy as np
+        flat   = array.ravel().astype(np.uint8) & PIXEL_MASK
+        packed = flat[0::2] | (flat[1::2] << 4)
+        self.data[:] = packed.tobytes()
